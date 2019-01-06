@@ -1,0 +1,11 @@
+{
+    "mqtt-configuration": {
+        "server": "mqtt",
+        "port": 1883,
+        "qos": 0
+    },
+    "sound-configuration": {
+        "device": "/dev/dsp",
+        "subscription" : "home/door/bell/#"
+    }
+}
