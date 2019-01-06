@@ -28,7 +28,6 @@ CLEANFILES+=${_dts:R:S/$/.dtbo/}
 
 install: ${DTB}
 	@echo "Overlay-Install"
-	install ${DTB} /boot/dtb/overlays/${DTB}
 
 .include <bsd.dep.mk>
 .include <bsd.obj.mk>

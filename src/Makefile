@@ -28,10 +28,7 @@ CLEANFILES+=${FIRMWARE} gpio.txt gpio.bin
 all: ${FIRMWARE} ${PROG_CXX}
 
 install: all
-	install ${PROG_CXX} ${PREFIX}/bin
-	mkdir -p ${PREFIX}/share/bell
-	install DoorBell.wav ${PREFIX}/share/bell/DoorBell.wav
-	install config.json ${PREFIX}/share/bell/config.json
+	@echo Install
 
 .SUFFIXES	: .p .h
 
