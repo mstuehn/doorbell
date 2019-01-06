@@ -3,10 +3,14 @@ SRCS=main.cpp wavfile.cpp comms.cpp pructl.c
 MAN=
 PREFIX?=/usr/local
 
-CFLAGS+=-I. \
+INCLUDES= -I. \
 	-I/usr/include \
 	-I/usr/local/include \
 	-I/usr/local/include/jsoncpp
+
+CFLAGS+=${INCLUDES}
+
+CXXFLAGS+=${INCLUDES}
 
 LDFLAGS+=-L/usr/lib \
 	 -L/usr/local/lib \
