@@ -1,4 +1,4 @@
-PROG_CXX=bell
+PROG_CXX=doorbell
 SRCS=main.cpp wavfile.cpp comms.cpp pructl.c
 MAN=
 PREFIX?=/usr/local
