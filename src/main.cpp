@@ -22,6 +22,7 @@ enum states_t
 
 static bool stop = false;
 static std::string sound_device = "/dev/dsp";
+static std::string file_to_play;
 
 int init_device( WavFile& file )
 {
@@ -97,7 +98,7 @@ void play_worker()
         {
             if( state == IDLE )
             {
-                int result = fd.open( "DoorBell.wav" );
+                int result = fd.open( file_to_play );
                 sndfd = init_device( fd );
 
                 if( !(sndfd < 0) && !(result < 0) ) {
@@ -150,7 +151,7 @@ int main( int argc, char* argv[] )
 
     Json::Value root;
     Json::Reader rd;
-    std::ifstream config("config.json", std::ifstream::binary);
+    std::ifstream config("/usr/local/etc/doorbell/config.json", std::ifstream::binary);
     bool parsingOk = rd.parse(config, root, false);
 
     if( !parsingOk )
@@ -159,6 +160,7 @@ int main( int argc, char* argv[] )
         exit( 2 );
     }
 
+    file_to_play = root["sound-configuration"]["file_to_play"].asString();
     sound_device = root["sound-configuration"]["device"].asString();
     std::thread player( play_worker );
 

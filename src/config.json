@@ -7,5 +7,6 @@
     "sound-configuration": {
         "device": "/dev/dsp",
         "subscription" : "home/door/bell/#"
+        "file_to_play" : "/usr/local/share/bell/DoorBell.wav"
     }
 }
