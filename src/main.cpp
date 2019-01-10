@@ -94,26 +94,24 @@ void play_worker()
 
     while(!stop) {
 
-        if( activate != get_last() )
+        if( state == IDLE )
         {
-            if( state == IDLE )
-            {
-                int result = fd.open( file_to_play );
-                sndfd = init_device( fd );
+            wait_for_events();
 
-                if( !(sndfd < 0) && !(result < 0) ) {
-                    state = PLAYING;
-                }
+            int result = fd.open( file_to_play );
+            sndfd = init_device( fd );
+
+            if( !(sndfd < 0) && !(result < 0) ) {
+                state = PLAYING;
             }
-            else fd.reset();
-
-            activate = get_last();
         }
 
         if( state == PLAYING )
         {
             size_t n, bufsz = 256;
             uint8_t buf[bufsz];
+
+            if( trywait_for_events() > 0 ) fd.reset();
 
             int len = fd.read( buf, bufsz );
 

@@ -2,23 +2,31 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <semaphore.h>
+
 #include "gpio_bin.h"
 
-static uint64_t last;
 static pru_t s_pru;
 static int s_prunum = -1;
 
 static int s_irq = -1;
 static int s_event = -1;
 
-uint64_t get_last()
+static sem_t s_events;
+
+int trywait_for_events()
 {
-    return last;
+    return sem_try_wait( &s_events );
+}
+
+int wait_for_events()
+{
+    return sem_wait( &s_events );
 }
 
 static void pru_cb( uint64_t ts )
 {
-    last = ts;
+    sem_post( &s_events );
 }
 
 int initialize_pru( int prunum, int irq, int event )
@@ -49,6 +57,12 @@ int initialize_pru( int prunum, int irq, int event )
         return -4;
     }
 
+    if( sem_init( &s_event, 0, 0 ) < 0 )
+    {
+        printf("Event Counter init failed\n");
+        return -5;
+    }
+
     s_prunum = prunum;
     s_irq = irq;
     s_event = event;
@@ -61,5 +75,6 @@ int pru_exit()
     pru_disable( s_pru, s_prunum );
     pru_deregister_irq( s_pru, s_irq );
     pru_free( s_pru );
+    sem_destroy( &s_event );
     return 0;
 }
