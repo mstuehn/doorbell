@@ -88,7 +88,6 @@ void play_worker()
     uint64_t last;
     states_t state = IDLE;
 
-    uint64_t activate = get_last();
     WavFile fd;
     int sndfd = -1;
 
