@@ -12,21 +12,21 @@ static int s_prunum = -1;
 static int s_irq = -1;
 static int s_event = -1;
 
-static sem_t s_events;
+static sem_t s_event_sem;
 
 int trywait_for_events()
 {
-    return sem_trywait( &s_events );
+    return sem_trywait( &s_event_sem );
 }
 
 int wait_for_events()
 {
-    return sem_wait( &s_events );
+    return sem_wait( &s_event_sem );
 }
 
 static void pru_cb( uint64_t ts )
 {
-    sem_post( &s_events );
+    sem_post( &s_event_sem );
 }
 
 int initialize_pru( int prunum, int irq, int event )
@@ -57,7 +57,7 @@ int initialize_pru( int prunum, int irq, int event )
         return -4;
     }
 
-    if( sem_init( &s_event, 0, 0 ) < 0 )
+    if( sem_init( &s_event_sem, 0, 0 ) < 0 )
     {
         printf("Event Counter init failed\n");
         return -5;
@@ -75,6 +75,6 @@ int pru_exit()
     pru_disable( s_pru, s_prunum );
     pru_deregister_irq( s_pru, s_irq );
     pru_free( s_pru );
-    sem_destroy( &s_event );
+    sem_destroy( &s_event_sem );
     return 0;
 }
