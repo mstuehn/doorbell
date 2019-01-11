@@ -110,7 +110,7 @@ void play_worker()
             size_t n, bufsz = 256;
             uint8_t buf[bufsz];
 
-            if( trywait_for_events() > 0 ) fd.reset();
+            if( trywait_for_events() == 0 ) fd.reset();
 
             int len = fd.read( buf, bufsz );
 
