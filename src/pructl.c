@@ -16,7 +16,7 @@ static sem_t s_events;
 
 int trywait_for_events()
 {
-    return sem_try_wait( &s_events );
+    return sem_trywait( &s_events );
 }
 
 int wait_for_events()
