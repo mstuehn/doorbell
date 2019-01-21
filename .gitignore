@@ -2,3 +2,4 @@ src/*bin.h
 src/*bin
 src/*txt
 overlays/*dtbo
+.depend
