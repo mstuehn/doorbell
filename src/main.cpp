@@ -2,138 +2,55 @@
 #include <signal.h>
 #include <iostream>
 #include <fstream>
-#include <future>
 
 #include <fcntl.h>
 #include <inttypes.h>
 #include <sys/types.h>
-#include <json/json.h>
-#include <sys/soundcard.h>
+#include <stdlib.h>
+#include <libpru.h>
 
-#include "comms.h"
-#include "pructl.h"
-#include "wavfile.h"
+#include "sound.h"
+#include "gpio_bin.h"
 
-enum states_t
+pru_t pru_init( uint8_t prunum, uint8_t irq, uint8_t event )
 {
-    IDLE = 0,
-    PLAYING,
-};
+    auto pru = pru_alloc("ti,am335x");
 
-static bool stop = false;
-static std::string sound_device = "/dev/dsp";
-static std::string file_to_play;
-
-int init_device( WavFile& file )
-{
-    int fd = open( sound_device.c_str(), O_WRONLY );
-    if( fd < 0) {
-        printf("Open of %s failed %d\n", sound_device.c_str(), fd);
-        return -1;
-    }
-
-    //if (ioctl(fd, SNDCTL_DSP_GETBLKSIZE, &buf_size) < 0) {
-    //    printf("SNDCTL_DSP_GETBLKSIZE failed %d\n", fd );
-    //    return false;
-    //}
-
-    uint32_t param = file.get_samplesize();
-    int result;
-    //if ((result = ioctl(fd, SNDCTL_DSP_SAMPLESIZE, &param )) < 0) {
-    //    printf("SNDCTL_DSP_SAMPLESIZE failed %d\n", errno );
-    //    return -1;
-    //}
-
-    param = file.get_speed();
-    if ((result = ioctl(fd, SNDCTL_DSP_SPEED, &param )) < 0) {
-        printf("SNDCTL_DSP_SPEED failed %d\n", errno );
-        return -1;
-    }
-    param = file.get_samplerate();
-    if ((result = ioctl(fd, SOUND_PCM_WRITE_RATE, &param )) < 0) {
-        printf("SOUND_PCM_WRITE_RATE failed %d\n", errno);
-        return -1;
-    }
-
-    int format;
-    switch( file.get_bits_per_sample() )
+    if( pru == nullptr )
     {
-        case 8: format = AFMT_U8; break;
-        case 16:  format = AFMT_S16_LE; break;
-        default: break;
+        fprintf( stderr, "Allocation failed\n");
+        return nullptr;
     }
 
-    if (ioctl(fd, SNDCTL_DSP_SETFMT, &format) < 0) {
-        printf("SNDCTL_DSP_SETFMT failed %d\n", fd );
-        return -1;
+    if( pru_upload_buffer( pru, prunum, (const char*)pru_gpio_fw, sizeof(pru_gpio_fw) ))
+    {
+        fprintf( stderr, "Uploading buffer failed\n");
+        return nullptr;
     }
 
-    int ch = file.get_channels();
-    if (file.get_channels() > 1) {
-        if (ioctl(fd, SNDCTL_DSP_STEREO, &ch) < 0) {
-            printf("SNDCTL_DSP_STEREO failed %d\n", fd );
-            return -1;
-        }
-    }
-    if (ioctl(fd, SNDCTL_DSP_SYNC, NULL) < 0) {
-        printf("SNDCTL_DSP_SYNC failed %d\n", fd );
-        return -1;
+    if( pru_register_irq( pru, irq, irq, event ) < 0 )
+    {
+        fprintf( stderr, "registering interrupt failed\n");
+        return nullptr;
     }
 
-    return fd;
+    if( pru_enable( pru, 0, 0 ) )
+    {
+        fprintf(stderr, "Enabling pru failed\n");
+        return nullptr;
+    }
+
+    return pru;
 }
 
-void play_worker()
+static void __attribute__((noreturn))
+usage(void)
 {
-    uint64_t last;
-    states_t state = IDLE;
-
-    WavFile fd;
-    int sndfd = -1;
-
-    while(!stop) {
-
-        if( state == IDLE )
-        {
-            wait_for_events();
-
-            int result = fd.open( file_to_play );
-            sndfd = init_device( fd );
-
-            if( !(sndfd < 0) && !(result < 0) ) {
-                state = PLAYING;
-            }
-        }
-
-        if( state == PLAYING )
-        {
-            size_t n, bufsz = 256;
-            uint8_t buf[bufsz];
-
-            if( trywait_for_events() == 0 ) fd.reset();
-
-            int len = fd.read( buf, bufsz );
-
-            if( len < 0 ) {
-                perror( "Error during read" );
-                exit(1);
-            }
-
-            if( len == 0 ){
-                fd.close();
-                close( sndfd );
-                state = IDLE;
-            }
-
-            n = write( sndfd, buf, len );
-            if( n==0 ) {
-                perror("Error during write");
-                exit(1);
-            }
-        }
-    }
+    printf("usage: %s [-c] config-file\n", getprogname());
+	exit(1);
 }
 
+static bool run = true;
 
 int main( int argc, char* argv[] )
 {
@@ -141,50 +58,58 @@ int main( int argc, char* argv[] )
                         std::cout
                             << "CTR-C pressed"
                             << std::endl;
-                        stop = true;
+                        run = false;
                     });
-
-    if( initialize_pru( 0, 3, 17 ) < 0 ) exit( 1 );
 
     Json::Value root;
     Json::Reader rd;
-    std::ifstream config("/usr/local/etc/doorbell/config.json", std::ifstream::binary);
+    std::string config_filename = "/usr/local/etc/doorbell/config.json";
+
+    char ch;
+    while ((ch = getopt(argc, argv, "c:")) != -1) {
+        switch (ch) {
+        case 'c':
+			config_filename = std::string(optarg);
+            break;
+        case 'h':
+            usage();
+        default:
+            break;
+        }
+    }
+	argc -= optind;
+	argv += optind;
+
+    std::ifstream config( config_filename, std::ifstream::binary);
     bool parsingOk = rd.parse(config, root, false);
 
     if( !parsingOk )
     {
-        std::cout << "Error during config read" << std::endl;
+        std::cerr << "Error during reading " << config_filename << std::endl;
         exit( 2 );
     }
 
-    file_to_play = root["sound-configuration"]["file_to_play"].asString();
-    sound_device = root["sound-configuration"]["device"].asString();
-    std::thread player( play_worker );
+    root["sound-configuration"];
+    uint8_t prunum = 0;
+    uint8_t irq = 3;
+    uint8_t event = 17;
 
-    mosqpp::lib_init();
-
-    std::string topic = root["sound-configuration"]["subscription"].asString();
-    mqtt_con con( "newClient", true);
-    con.connect( root["mqtt-configuration"]["server"].asCString());
-
-    std::cout << topic.c_str() << std::endl;
-    int mid;
-    int result = con.subscribe( &mid, topic.c_str());
-    if( result  < 0 )
-    {
-        std::cout << "Error during subscription: " << topic << std::endl;
-        return result;
+    pru_t pru = pru_init( prunum, irq, event );
+    if( pru == nullptr ) {
+        printf("Error during PRU init, exiting\n");
+        return -2;
     }
 
-    while(!stop)
-    {
-        con.loop(5, 1);
+    if( spawn_sound_handler( pru, irq, root["sound-configuration"] ) < 0 ) {
+        printf("Error during sound init, exiting\n");
+        return -3;
     }
 
-    player.join();
+    // TODO: mosquitto part
+    while( run ) sleep(1);
 
-    pru_exit();
-    mosqpp::lib_cleanup();
+    stop_sound_handler();
+    free( pru );
 
     return 0;
 }
