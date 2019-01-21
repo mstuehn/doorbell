@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
 #include <semaphore.h>
 
 #include <iostream>
@@ -95,10 +96,10 @@ static void* play_worker( void* dummy )
 
         if( state == IDLE )
         {
-            sem_wait(&s_event_sem);
-            if( !run_thread ) break;
+            int result = sem_wait(&s_event_sem);
+            if( result != 0 ) break;
 
-            int result = fd.open( file_to_play );
+            result = fd.open( file_to_play );
             sndfd = init_device( fd );
 
             if( !(sndfd < 0) && !(result < 0) ) {
@@ -183,8 +184,11 @@ int stop_sound_handler()
 {
     run_thread = false;
 
-    /* notify thread so we are able to join*/
-    sem_post( &s_event_sem );
+    // TODO:  try to find out how to provoke
+    // EINTR on select/sem_wait
+    pthread_kill( sound_handler, SIGINT );
+    pthread_kill( pru_irq, SIGINT );
+
     pthread_join( sound_handler, NULL );
     pthread_join( pru_irq, NULL );
 
