@@ -65,11 +65,11 @@ int main( int argc, char* argv[] )
     Json::Reader rd;
     std::string config_filename = "/usr/local/etc/doorbell/config.json";
 
-    char ch;
-    while ((ch = getopt(argc, argv, "c:")) != -1) {
+    signed char ch;
+    while ((ch = getopt(argc, argv, "c:h")) != -1) {
         switch (ch) {
         case 'c':
-			config_filename = std::string(optarg);
+		config_filename = std::string(optarg);
             break;
         case 'h':
             usage();
@@ -77,8 +77,8 @@ int main( int argc, char* argv[] )
             break;
         }
     }
-	argc -= optind;
-	argv += optind;
+    argc -= optind;
+    argv += optind;
 
     std::ifstream config( config_filename, std::ifstream::binary);
     bool parsingOk = rd.parse(config, root, false);
@@ -109,7 +109,12 @@ int main( int argc, char* argv[] )
     while( run ) sleep(1);
 
     stop_sound_handler();
-    free( pru );
+
+    pru_free(pru);
+    if( pru_deregister_irq( pru, irq ) ) {
+        printf("Error during deregister\n");
+        return -3;
+    }
 
     return 0;
 }
