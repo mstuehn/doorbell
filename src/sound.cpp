@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <semaphore.h>
 
+#include <iostream>
+
 #include "wavfile.h"
 #include "sound.h"
 
@@ -144,8 +146,7 @@ static bool pru_callback(uint64_t ts)
 static void* read_pru(void* dummy)
 {
     /* this function blocks */
-    //pru_wait_irq( s_pru, s_irq, pru_callback );
-    while( run_thread ) sleep(1);
+    pru_wait_irq( s_pru, s_irq, pru_callback );
     return NULL;
 }
 
