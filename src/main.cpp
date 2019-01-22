@@ -101,20 +101,16 @@ int main( int argc, char* argv[] )
         return -2;
     }
 
-    printf("setup/spawn sound handler\n");
     if( spawn_sound_handler( pru, irq, root["sound-configuration"] ) < 0 ) {
         printf("Error during sound init, exiting\n");
         return -3;
     }
 
-    printf("setup/spawn mqtt handler\n");
     if( setup_mqtt( pru, irq, root["mqtt-configuration"] ) < 0 ) {
         printf("Error during mqtt init, exiting\n");
         return -4;
     }
 
-    // TODO: mosquitto part
-    printf("Run mainloop\n");
     for(;;)
     {
         if( !run ){
