@@ -2,11 +2,12 @@
     "mqtt-configuration": {
         "server": "mqtt",
         "port": 1883,
-        "qos": 0
+        "keepalive": 60,
+        "qos": 0,
+        "base_topic" : "home/door/bell/freebsd"
     },
     "sound-configuration": {
         "device": "/dev/dsp",
-        "subscription" : "home/door/bell/#",
         "file_to_play" : "/usr/local/share/doorbell/DoorBell.wav"
     }
 }

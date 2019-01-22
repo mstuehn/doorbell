@@ -10,6 +10,7 @@
 #include <libpru.h>
 
 #include "sound.h"
+#include "mqtt.h"
 #include "gpio_bin.h"
 
 pru_t pru_init( uint8_t prunum, uint8_t irq, uint8_t event )
@@ -100,15 +101,39 @@ int main( int argc, char* argv[] )
         return -2;
     }
 
+    printf("setup/spawn sound handler\n");
     if( spawn_sound_handler( pru, irq, root["sound-configuration"] ) < 0 ) {
         printf("Error during sound init, exiting\n");
         return -3;
     }
 
-    // TODO: mosquitto part
-    while( run ) sleep(1);
+    printf("setup/spawn mqtt handler\n");
+    if( setup_mqtt( pru, irq, root["mqtt-configuration"] ) < 0 ) {
+        printf("Error during mqtt init, exiting\n");
+        return -4;
+    }
 
+    // TODO: mosquitto part
+    printf("Run mainloop\n");
+    for(;;)
+    {
+        if( !run ){
+            printf("Stop Requested\n");
+            break;
+        }
+
+        int result = loop_mqtt();
+        if( result < 0 ) {
+            printf("Error Occured\n");
+            break;
+        }
+    }
+
+    printf("stop sound handler\n");
     stop_sound_handler();
+
+    printf("stop mqtt\n");
+    stop_mqtt();
 
     pru_free(pru);
     if( pru_deregister_irq( pru, irq ) ) {
