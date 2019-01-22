@@ -49,7 +49,6 @@ static bool pru_callback( uint64_t )
 static void* read_pru(void* dummy)
 {
     /* this function blocks */
-    std::cout << "read thread" << std::endl;
     pru_wait_irq( s_pru, s_irq, pru_callback );
     return NULL;
 }
@@ -57,24 +56,17 @@ static void* read_pru(void* dummy)
 void mqtt_msg_cb( struct mosquitto* mqtt, void* mqtt_new_data, const struct mosquitto_message* omsg )
 {
     std::string topic = std::string(omsg->topic);
-
-    std::cout << "got message on topic " << topic << std::endl;
     if( omsg->payloadlen == 0 ) {
+        std::cout << "got message on topic " << topic << std::endl;
         std::cout << "with no content" << std::endl;
         return;
     }
-
     std::string msg = std::string( (const char*)omsg->payload, omsg->payloadlen);
-    std::cout << "with content " << msg << std::endl;
-
-    std::cout << "Dispatching bell ...";
     dispatch_bell();
-    std::cout << "done " << std::endl;
 }
 
 int setup_mqtt( pru_t pru, int8_t irq, Json::Value config )
 {
-    std::cout << "Setup mqtt" << std::endl;
     s_pru = pru;
     s_irq = irq;
 
