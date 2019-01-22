@@ -11,6 +11,9 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <iomanip>
+#include <ctime>
 
 #include "sound.h"
 #include "mqtt.h"
@@ -23,9 +26,18 @@ static pthread_t pru_irq;
 
 static std::string pub_topic;
 static std::string sub_topic;
+static std::string base_topic;
 static std::string host;
 
-static bool pru_callback( uint64_t )
+static std::string now() {
+    auto t = std::time(nullptr);
+    std::tm tm = *std::localtime(&t);
+    std::stringstream wss;
+    wss << std::put_time(&tm, "%H:%M:%S %d-%m-%Y");
+    return wss.str();
+}
+
+static bool pru_callback( uint64_t dummy )
 {
     if( mqtt == nullptr || pub_topic == "" )
     {
@@ -38,12 +50,16 @@ static bool pru_callback( uint64_t )
     }
     Json::StreamWriterBuilder wr;
     Json::Value info;
-    info["date"] = std::string("now");
+
+    info["date"] = now();
+    info["doorbell"] = true;
+
     std::string msg = Json::writeString(wr, info);
-    return mosquitto_publish(   mqtt, nullptr,
-                                pub_topic.c_str(),
-                                pub_topic.length(),
-                                msg.c_str(), 0, false ) == 0;
+    return mosquitto_publish( mqtt,
+                              nullptr,
+                              pub_topic.c_str(),
+                              msg.length(),
+                              msg.c_str(), 0, false ) == 0;
 }
 
 static void* read_pru(void* dummy)
@@ -62,7 +78,13 @@ void mqtt_msg_cb( struct mosquitto* mqtt, void* mqtt_new_data, const struct mosq
         return;
     }
     std::string msg = std::string( (const char*)omsg->payload, omsg->payloadlen);
-    dispatch_bell();
+
+    bool match;
+    std::string cmd_topic = base_topic+"/cmd/ring";
+    int result = mosquitto_topic_matches_sub( cmd_topic.c_str(),
+                                              topic.c_str(),
+                                              &match);
+    if( match ) dispatch_bell();
 }
 
 int setup_mqtt( pru_t pru, int8_t irq, Json::Value config )
@@ -71,8 +93,9 @@ int setup_mqtt( pru_t pru, int8_t irq, Json::Value config )
     s_irq = irq;
 
     mosquitto_lib_init();
-    pub_topic = config["base_topic"].asString() +"/occ";
-    sub_topic = config["base_topic"].asString() +"/cmd/#";
+    base_topic = config["base_topic"].asString();
+    pub_topic = base_topic + "/active";
+    sub_topic = base_topic + "/cmd/#";
 
     mqtt = mosquitto_new( "nanobsd", true, nullptr );
     if( mqtt == nullptr ) {
