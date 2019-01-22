@@ -4,7 +4,7 @@
         "port": 1883,
         "keepalive": 60,
         "qos": 0,
-        "base_topic" : "home/door/bell/freebsd"
+        "base_topic" : "myhouse/bell/nanobsd"
     },
     "sound-configuration": {
         "device": "/dev/dsp",
