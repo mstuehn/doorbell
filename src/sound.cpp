@@ -138,10 +138,14 @@ static void* play_worker( void* dummy )
     return NULL;
 }
 
+int dispatch_bell()
+{
+    return sem_post( &s_event_sem );
+}
+
 static bool pru_callback(uint64_t ts)
 {
-    sem_post( &s_event_sem );
-    return run_thread;
+    return run_thread && (dispatch_bell() == 0);
 }
 
 static void* read_pru(void* dummy)
