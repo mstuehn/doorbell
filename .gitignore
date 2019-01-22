@@ -3,3 +3,7 @@ src/*bin
 src/*txt
 overlays/*dtbo
 .depend
+.depend*
+*.o
+compile_commands.json
+doorbell*
