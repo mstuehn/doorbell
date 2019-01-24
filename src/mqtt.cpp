@@ -140,6 +140,7 @@ int loop_mqtt()
             break;
         case MOSQ_ERR_NO_CONN:
         case MOSQ_ERR_CONN_LOST:
+            sleep(2);
             result = mosquitto_reconnect( mqtt );
             std::cerr << "Connection lost, try to reconnect: " << result << std::endl;
             break;
