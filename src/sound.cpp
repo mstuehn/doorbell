@@ -34,7 +34,7 @@ enum states_t
 static std::string sound_device = "/dev/dsp";
 static std::string file_to_play;
 
-static int init_device( WavFile& file )
+static int open_device( WavFile& file )
 {
     int fd = open( sound_device.c_str(), O_WRONLY );
     if( fd < 0) {
@@ -81,7 +81,23 @@ static int init_device( WavFile& file )
         return -1;
     }
 
+    int vol = 100 | 100 << 8;
+    if( ioctl( fd, SNDCTL_DSP_SETPLAYVOL, vol) < 0 ) {
+        printf("SNDCTL_DSP_STEREO failed %d\n", fd );
+        return -1;
+    }
+
     return fd;
+}
+
+static int close_device( int fd )
+{
+    int vol = 0;
+    if( ioctl( fd, SNDCTL_DSP_SETPLAYVOL, vol) < 0 ) {
+        printf("SNDCTL_DSP_STEREO failed %d\n", fd );
+        return -1;
+    }
+    return close( fd );
 }
 
 static void* play_worker( void* dummy )
@@ -100,7 +116,7 @@ static void* play_worker( void* dummy )
             if( result != 0 ) break;
 
             result = fd.open( file_to_play );
-            sndfd = init_device( fd );
+            sndfd = open_device( fd );
 
             if( !(sndfd < 0) && !(result < 0) ) {
                 state = PLAYING;
@@ -122,8 +138,8 @@ static void* play_worker( void* dummy )
             }
 
             if( len == 0 ){
+                close_device( sndfd );
                 fd.close();
-                close( sndfd );
                 state = IDLE;
             }
 
