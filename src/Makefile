@@ -17,30 +17,10 @@ LDFLAGS+=-L/usr/lib \
 	 -L/usr/local/lib \
 	-L/home/manuel/devel/github/libpru/build
 
-LDADD=-ljsoncpp -lmosquitto -lmosquittopp -lpru -pthread
+LDADD=-ljsoncpp -lmosquitto -lmosquittopp -lgpio -pthread
 COMPILER_FEATURES=c++11
-
-FIRMWARE=gpio_bin.h
-PRU_SRC=gpio.p
-ASSEMBLER=pasm
-PRUCTL=pructl
-FLAGS=-V3 -bLc -Cpru_gpio_fw
-CLEANFILES+=${FIRMWARE} gpio.txt gpio.bin
-
-all: ${FIRMWARE} ${PROG_CXX}
 
 install: all
 	@echo Install
-
-.SUFFIXES	: .p .h
-
-.if defined(PRU_SRC)
-.for _prusrc in ${PRU_SRC}
-${_prusrc:R:S/$/_bin.h/}:	${_prusrc} ${OP_META}
-	@echo Generating ${.TARGET} from ${_prusrc}
-	${ASSEMBLER} ${FLAGS} ${_prusrc}
-CLEANFILES+=${_prusrc:R:S/$/_bin.h/}
-.endfor
-.endif
 
 .include <bsd.prog.mk>

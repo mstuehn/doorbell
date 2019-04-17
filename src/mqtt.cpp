@@ -1,6 +1,5 @@
 #include <pthread.h>
 #include <fcntl.h>
-#include <libpru.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -8,6 +7,7 @@
 #include <semaphore.h>
 #include <mosquitto.h>
 #include <errno.h>
+#include <libgpio.h>
 
 #include <iostream>
 #include <string>
@@ -19,10 +19,11 @@
 #include "mqtt.h"
 
 static struct mosquitto* mqtt;
-static pru_t s_pru;
-static int s_irq = -1;
+static int s_pin = -1;
+static int s_ctrl = -1;
+static bool run_thread = true;
 
-static pthread_t pru_irq;
+static pthread_t gpio_poll;
 
 static std::string pub_topic;
 static std::string sub_topic;
@@ -62,10 +63,30 @@ static bool pru_callback( uint64_t dummy )
                               msg.c_str(), 0, false ) == 0;
 }
 
+static int debounce( int value )
+{
+    return value;
+}
+
 static void* read_pru(void* dummy)
 {
     /* this function blocks */
-    pru_wait_irq( s_pru, s_irq, pru_callback );
+    struct timespec timeout;
+    timeout.tv_nsec = 10000000;
+    timeout.tv_sec = 0;
+
+    gpio_handle_t handle = gpio_open( s_ctrl );
+
+    if( handle == GPIO_INVALID_HANDLE ) return NULL;
+
+    while( run_thread )
+    {
+        nanosleep(&timeout, NULL);
+        int value = gpio_pin_get( handle, s_pin );
+        if( debounce(value) ) dispatch_bell();
+    }
+
+    gpio_close( handle );
     return NULL;
 }
 
@@ -87,10 +108,10 @@ void mqtt_msg_cb( struct mosquitto* mqtt, void* mqtt_new_data, const struct mosq
     if( match ) dispatch_bell();
 }
 
-int setup_mqtt( pru_t pru, int8_t irq, Json::Value config )
+int setup_mqtt( int gpio, int pin, Json::Value config )
 {
-    s_pru = pru;
-    s_irq = irq;
+    s_ctrl = gpio;
+    s_pin = pin;
 
     mosquitto_lib_init();
     base_topic = config["base_topic"].asString();
@@ -120,7 +141,7 @@ int setup_mqtt( pru_t pru, int8_t irq, Json::Value config )
 
     mosquitto_message_callback_set( mqtt, mqtt_msg_cb );
 
-    if( pthread_create( &pru_irq, NULL, read_pru, NULL ) )
+    if( pthread_create( &gpio_poll, NULL, read_pru, NULL ) )
     {
         std::cerr << "failed to create pru-reader pthread" << std::endl;
         perror("Failure");
@@ -154,8 +175,8 @@ int loop_mqtt()
 int stop_mqtt()
 {
     std::cerr << "stop mqtt-pru-irq" << std::endl;
-    pthread_kill( pru_irq, SIGINT );
-    pthread_join( pru_irq, nullptr );
+    pthread_kill( gpio_poll, SIGINT );
+    pthread_join( gpio_poll, nullptr );
 
     std::cerr << "cleanup mqtt lib" << std::endl;
     return mosquitto_lib_cleanup();
