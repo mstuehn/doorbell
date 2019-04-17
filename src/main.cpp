@@ -7,42 +7,14 @@
 #include <inttypes.h>
 #include <sys/types.h>
 #include <stdlib.h>
-#include <libpru.h>
+
+#include <sys/types.h>
+#include <err.h>
+
+#include <libgpio.h>
 
 #include "sound.h"
 #include "mqtt.h"
-#include "gpio_bin.h"
-
-pru_t pru_init( uint8_t prunum, uint8_t irq, uint8_t event )
-{
-    auto pru = pru_alloc("ti,am335x");
-
-    if( pru == nullptr )
-    {
-        fprintf( stderr, "Allocation failed\n");
-        return nullptr;
-    }
-
-    if( pru_upload_buffer( pru, prunum, (const char*)pru_gpio_fw, sizeof(pru_gpio_fw) ))
-    {
-        fprintf( stderr, "Uploading buffer failed\n");
-        return nullptr;
-    }
-
-    if( pru_register_irq( pru, irq, irq, event ) < 0 )
-    {
-        fprintf( stderr, "registering interrupt failed\n");
-        return nullptr;
-    }
-
-    if( pru_enable( pru, 0, 0 ) )
-    {
-        fprintf(stderr, "Enabling pru failed\n");
-        return nullptr;
-    }
-
-    return pru;
-}
 
 static void __attribute__((noreturn))
 usage(void)
@@ -70,7 +42,7 @@ int main( int argc, char* argv[] )
     while ((ch = getopt(argc, argv, "c:h")) != -1) {
         switch (ch) {
         case 'c':
-		config_filename = std::string(optarg);
+            config_filename = std::string(optarg);
             break;
         case 'h':
             usage();
@@ -91,22 +63,15 @@ int main( int argc, char* argv[] )
     }
 
     root["sound-configuration"];
-    uint8_t prunum = 0;
-    uint8_t irq = 3;
-    uint8_t event = 17;
+    int pin;
+    int gpio;
 
-    pru_t pru = pru_init( prunum, irq, event );
-    if( pru == nullptr ) {
-        printf("Error during PRU init, exiting\n");
-        return -2;
-    }
-
-    if( spawn_sound_handler( pru, irq, root["sound-configuration"] ) < 0 ) {
+    if( spawn_sound_handler( gpio, pin, root["sound-configuration"] ) < 0 ) {
         printf("Error during sound init, exiting\n");
         return -3;
     }
 
-    if( setup_mqtt( pru, irq, root["mqtt-configuration"] ) < 0 ) {
+    if( setup_mqtt( gpio, pin, root["mqtt-configuration"] ) < 0 ) {
         printf("Error during mqtt init, exiting\n");
         return -4;
     }
@@ -130,12 +95,6 @@ int main( int argc, char* argv[] )
 
     printf("stop mqtt\n");
     stop_mqtt();
-
-    pru_free(pru);
-    if( pru_deregister_irq( pru, irq ) ) {
-        printf("Error during deregister\n");
-        return -3;
-    }
 
     return 0;
 }

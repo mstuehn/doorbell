@@ -1,5 +1,5 @@
 
-SUBDIR=overlays src
+SUBDIR=src
 
 .include <bsd.prog.mk>
 

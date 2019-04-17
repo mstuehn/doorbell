@@ -2,25 +2,26 @@
 
 #include <pthread.h>
 #include <fcntl.h>
-#include <libpru.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
 #include <semaphore.h>
+#include <time.h>
 
 #include <iostream>
 
+#include "libgpio.h"
 #include "wavfile.h"
 #include "sound.h"
 
-static pru_t s_pru;
-static int s_irq = -1;
+static int s_pin = -1;
+static int s_ctrl = -1;
 
 static sem_t s_event_sem;
 static bool run = true;
 
-static pthread_t pru_irq;
+static pthread_t gpio_poll;
 static pthread_t sound_handler;
 
 static bool run_thread = true;
@@ -159,22 +160,35 @@ int dispatch_bell()
     return sem_post( &s_event_sem );
 }
 
-static bool pru_callback(uint64_t ts)
+static int debounce( int value )
 {
-    return run_thread && (dispatch_bell() == 0);
+    return value;
 }
 
-static void* read_pru(void* dummy)
+static void* read_gpio(void* dummy)
 {
     /* this function blocks */
-    pru_wait_irq( s_pru, s_irq, pru_callback );
+    struct timespec timeout;
+    timeout.tv_nsec = 10000000;
+    timeout.tv_sec = 0;
+
+    gpio_handle_t handle = gpio_open( s_ctrl );
+
+    if( handle == GPIO_INVALID_HANDLE ) return NULL;
+
+    while( run_thread )
+    {
+        nanosleep(&timeout, NULL);
+        int value = gpio_pin_get( handle, s_pin );
+        if( debounce(value) ) dispatch_bell();
+    }
+
+    gpio_close( handle );
     return NULL;
 }
 
-int spawn_sound_handler( pru_t pru, int8_t irq, Json::Value config )
+int spawn_sound_handler( int gpio, int pin, Json::Value config )
 {
-    s_pru = pru;
-    s_irq = irq;
     run_thread = true;
 
     if( sem_init( &s_event_sem, 0, 0 ) < 0 )
@@ -183,9 +197,9 @@ int spawn_sound_handler( pru_t pru, int8_t irq, Json::Value config )
         return -1;
     }
 
-    if( pthread_create( &pru_irq, NULL, read_pru, NULL ) )
+    if( pthread_create( &gpio_poll, NULL, read_gpio, NULL ) )
     {
-        printf("failed to create pru-reader pthread");
+        printf("failed to create gpio-reader pthread");
         return -2;
     }
 
@@ -194,6 +208,9 @@ int spawn_sound_handler( pru_t pru, int8_t irq, Json::Value config )
         printf("failed to create sound pthread");
         return -3;
     }
+
+    s_ctrl = gpio;
+    s_pin = pin;
 
     file_to_play = config["file_to_play"].asString();
     sound_device = config["device"].asString();
@@ -207,10 +224,10 @@ int stop_sound_handler()
     // TODO:  try to find out how to provoke
     // EINTR on select/sem_wait
     pthread_kill( sound_handler, SIGINT );
-    pthread_kill( pru_irq, SIGINT );
+    pthread_kill( gpio_poll, SIGINT );
 
     pthread_join( sound_handler, NULL );
-    pthread_join( pru_irq, NULL );
+    pthread_join( gpio_poll, NULL );
 
     sem_destroy( &s_event_sem );
     return 0;
