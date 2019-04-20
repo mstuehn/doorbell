@@ -27,6 +27,9 @@ DoorBell::DoorBell( Json::Value& config ) //: m_PlayWorker( &DoorBell::play_work
 DoorBell::~DoorBell()
 {
     m_KeepRunning = false;
+
+    // Release play_worker
+    sem_post( &m_EvenNotifier );
     m_PlayWorker.join();
 
     sem_destroy( &m_EvenNotifier );
@@ -39,7 +42,7 @@ bool DoorBell::play_worker()
     while(m_KeepRunning)
     {
         int result = sem_wait(&m_EvenNotifier);
-        if( result != 0 ) return false;
+        if( result != 0 || !m_KeepRunning ) return false;
 
         if( fd.open( m_FileToPlay ) != -1 )
         {
@@ -50,7 +53,6 @@ bool DoorBell::play_worker()
             }
             size_t n, bufsz = 256;
             uint8_t buf[bufsz];
-            printf("start playing\n");
             while(1)
             {
                 if( sem_trywait( &m_EvenNotifier ) == 0 ) fd.reset();
