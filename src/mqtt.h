@@ -14,8 +14,7 @@ class MQTT {
 
         bool add_callback( std::string topic, std::function<void(uint8_t*,size_t)> );
 
-        template<typename T>
-        bool publish( std::string topic, T* payload, size_t payloadlen, int qos);
+        bool publish( std::string topic, const char* payload, size_t payloadlen, int qos);
 
         int loop();
 
@@ -38,8 +37,3 @@ class MQTT {
         std::list<mqtt_topic> m_TopicList;
 };
 
-template<typename T>
-inline bool MQTT::publish( std::string topic, T* payload, size_t payloadlen, int qos ){
-    int mid;
-    return mosquitto_publish( m_Mosq, &mid, topic.c_str(), payloadlen, payload, qos, true ) == MOSQ_ERR_SUCCESS;
-}
