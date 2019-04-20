@@ -1,96 +1,14 @@
-#include <pthread.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <signal.h>
-#include <semaphore.h>
-#include <mosquitto.h>
-#include <errno.h>
-#include <libgpio.h>
 
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <iomanip>
-#include <ctime>
-
-#include "sound.h"
 #include "mqtt.h"
+#include <iostream>
+#include <chrono>
+#include <thread>
 
-static struct mosquitto* mqtt;
-static int s_pin = -1;
-static int s_ctrl = -1;
-static bool run_thread = true;
+using namespace std::chrono_literals;
 
-static pthread_t gpio_poll;
+std::atomic<uint32_t> MQTT::s_RefCnt(0);
 
-static std::string pub_topic;
-static std::string sub_topic;
-static std::string base_topic;
-static std::string host;
-
-static std::string now() {
-    auto t = std::time(nullptr);
-    std::tm tm = *std::localtime(&t);
-    std::stringstream wss;
-    wss << std::put_time(&tm, "%H:%M:%S %d-%m-%Y");
-    return wss.str();
-}
-
-static bool pru_callback( uint64_t dummy )
-{
-    if( mqtt == nullptr || pub_topic == "" )
-    {
-        std::cerr   << "MQTT not ready: "
-                    << mqtt << " "
-                    << "Topic: ->"
-                    << pub_topic <<
-                    "<-" << std::endl;
-        return false;
-    }
-    Json::StreamWriterBuilder wr;
-    Json::Value info;
-
-    info["date"] = now();
-    info["doorbell"] = true;
-
-    std::string msg = Json::writeString(wr, info);
-    return mosquitto_publish( mqtt,
-                              nullptr,
-                              pub_topic.c_str(),
-                              msg.length(),
-                              msg.c_str(), 0, false ) == 0;
-}
-
-static int debounce( int value )
-{
-    return value;
-}
-
-static void* read_pru(void* dummy)
-{
-    /* this function blocks */
-    struct timespec timeout;
-    timeout.tv_nsec = 10000000;
-    timeout.tv_sec = 0;
-
-    gpio_handle_t handle = gpio_open( s_ctrl );
-
-    if( handle == GPIO_INVALID_HANDLE ) return NULL;
-
-    while( run_thread )
-    {
-        nanosleep(&timeout, NULL);
-        int value = gpio_pin_get( handle, s_pin );
-        if( debounce(value) ) dispatch_bell();
-    }
-
-    gpio_close( handle );
-    return NULL;
-}
-
-void mqtt_msg_cb( struct mosquitto* mqtt, void* mqtt_new_data, const struct mosquitto_message* omsg )
+void MQTT::mqtt_msg_cb( struct mosquitto* mqtt, void* mqtt_new_data, const struct mosquitto_message* omsg )
 {
     std::string topic = std::string(omsg->topic);
     if( omsg->payloadlen == 0 ) {
@@ -100,60 +18,62 @@ void mqtt_msg_cb( struct mosquitto* mqtt, void* mqtt_new_data, const struct mosq
     }
     std::string msg = std::string( (const char*)omsg->payload, omsg->payloadlen);
 
-    bool match;
-    std::string cmd_topic = base_topic+"/cmd/ring";
-    int result = mosquitto_topic_matches_sub( cmd_topic.c_str(),
-                                              topic.c_str(),
-                                              &match);
-    if( match ) dispatch_bell();
+    MQTT *myself = (MQTT *)mqtt_new_data;
+
+    for( auto item: myself->m_TopicList)
+    {
+        bool match;
+        mosquitto_topic_matches_sub( item.topic.c_str(),
+                                    topic.c_str(),
+                                    &match);
+        if( match ) item.handler( (uint8_t*)omsg->payload, omsg->payloadlen );
+    }
 }
 
-int setup_mqtt( int gpio, int pin, Json::Value config )
+
+MQTT::MQTT(Json::Value config)
 {
-    s_ctrl = gpio;
-    s_pin = pin;
-
-    mosquitto_lib_init();
-    base_topic = config["base_topic"].asString();
-    pub_topic = base_topic + "/active";
-    sub_topic = base_topic + "/cmd/#";
-
-    mqtt = mosquitto_new( "nanobsd", true, nullptr );
-    if( mqtt == nullptr ) {
-        std::cerr << "failed to create mqtt handle" << std::endl;
-        return -3;
+    if( s_RefCnt + 1 == 1 ){
+        s_RefCnt++;
+        mosquitto_lib_init();
     }
 
-    host = config["server"].asString();
+    m_Mosq = mosquitto_new( "foo", true, this );
+
+    auto host = config["server"].asString();
     auto port = config["port"].asInt();
     auto keepalive = config["keepalive"].asInt();
-    if( mosquitto_connect( mqtt, host.c_str(), port, keepalive ) < 0 )
+    if( mosquitto_connect( m_Mosq, host.c_str(), port, keepalive ) < 0 )
     {
         std::cerr << "failed to connect to mqtt" << std::endl;
-        return -2;
     }
 
-    if( mosquitto_subscribe( mqtt, NULL, sub_topic.c_str(), 0 ) < 0 )
-    {
-        std::cerr << "failed to subscribe mqtt to " << sub_topic << std::endl;
-        return -3;
-    }
-
-    mosquitto_message_callback_set( mqtt, mqtt_msg_cb );
-
-    if( pthread_create( &gpio_poll, NULL, read_pru, NULL ) )
-    {
-        std::cerr << "failed to create pru-reader pthread" << std::endl;
-        perror("Failure");
-        return -4;
-    }
-
-    return 0;
+    mosquitto_message_callback_set( m_Mosq, mqtt_msg_cb );
 }
 
-int loop_mqtt()
+MQTT::~MQTT()
 {
-    int result = mosquitto_loop( mqtt, 1000, 1 );
+    if( s_RefCnt - 1 > 0 ) {
+        s_RefCnt--;
+        mosquitto_lib_cleanup();
+    }
+}
+
+bool MQTT::add_callback( std::string topic, std::function<void(uint8_t*,size_t)> handler )
+{
+    if( mosquitto_subscribe( m_Mosq, NULL, topic.c_str(), 0 ) < 0 )
+    {
+        std::cerr << "failed to subscribe mqtt to " << topic << std::endl;
+        return false;
+    }
+
+    m_TopicList.push_back( mqtt_topic(topic,handler) );
+    return true;
+}
+
+int MQTT::loop()
+{
+    int result = mosquitto_loop( m_Mosq, 1000, 1 );
     switch (result)
     {
         case 0:
@@ -161,8 +81,8 @@ int loop_mqtt()
             break;
         case MOSQ_ERR_NO_CONN:
         case MOSQ_ERR_CONN_LOST:
-            sleep(2);
-            result = mosquitto_reconnect( mqtt );
+            std::this_thread::sleep_for( 1s );
+            result = mosquitto_reconnect( m_Mosq );
             std::cerr << "Connection lost, try to reconnect: " << result << std::endl;
             break;
         default:
@@ -170,14 +90,4 @@ int loop_mqtt()
             break;
     }
     return result;
-}
-
-int stop_mqtt()
-{
-    std::cerr << "stop mqtt-pru-irq" << std::endl;
-    pthread_kill( gpio_poll, SIGINT );
-    pthread_join( gpio_poll, nullptr );
-
-    std::cerr << "cleanup mqtt lib" << std::endl;
-    return mosquitto_lib_cleanup();
 }

@@ -1,9 +1,4 @@
-src/*bin.h
-src/*bin
-src/*txt
-overlays/*dtbo
-.depend
-.depend*
-*.o
+bin/*
+generated
 compile_commands.json
-doorbell*
+*bak
