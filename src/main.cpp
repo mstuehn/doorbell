@@ -99,14 +99,23 @@ int main( int argc, char* argv[] )
     std::thread gpiopoll([&bell, &config_devicename, pin, &mqtt, &base_topic](){
             struct timespec poll = { .tv_sec = 0, .tv_nsec = 5000000 /*5ms*/ };
             int old = 0;
+            int debounce = 10;
 
             gpio_handle_t handle = gpio_open_device(config_devicename.c_str());
             if( handle == GPIO_INVALID_HANDLE) exit(1);
 
             while(run) {
                 nanosleep(&poll, NULL);
-                if( gpio_pin_get( handle, pin) == 1 && old == 0 ){
+
+                if( gpio_pin_get(handle, pin) == 1 ) {
+                    if( debounce > 0 ) debounce--;
+                } else debounce = 10;
+
+                if( debounce == 10 && old == 1 ) old = 0;
+                if( debounce ==  0 && old == 0 ) {
+
                     bell.ring();
+
                     Json::StreamWriterBuilder wr;
                     Json::Value info;
                     info["date"] = now();
@@ -115,7 +124,7 @@ int main( int argc, char* argv[] )
                     std::string msg = Json::writeString(wr, info);
                     mqtt.publish(base_topic+"/ringed", msg.c_str(), msg.length(), 0 );
                     old = 1;
-                } else old = 0;
+                }
             }
 
             gpio_close( handle );
