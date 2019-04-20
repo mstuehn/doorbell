@@ -66,14 +66,14 @@ public:
     int reset();
 	int close();
 
-	uint16_t get_channels();
-	uint32_t get_samplerate();
-	uint16_t get_samplesize();
-	uint16_t get_bits_per_sample();
-	uint32_t get_period_count();
-	uint32_t get_period_size();
-    uint32_t get_speed();
-    size_t length();
+	uint16_t get_channels() const;
+	uint32_t get_samplerate() const;
+	uint16_t get_samplesize() const;
+	uint16_t get_bits_per_sample() const;
+	uint32_t get_period_count() const;
+	uint32_t get_period_size() const;
+    uint32_t get_speed() const;
+    size_t length() const;
 
 private:
 
@@ -89,42 +89,42 @@ private:
 
 };
 
-inline uint16_t WavFile::get_channels()
+inline uint16_t WavFile::get_channels() const
 {
 	return m_config.channels;
 }
 
-inline uint32_t WavFile::get_samplerate()
+inline uint32_t WavFile::get_samplerate() const
 {
 	return m_config.sample_rate;
 }
 
-inline uint16_t WavFile::get_samplesize()
+inline uint16_t WavFile::get_samplesize() const
 {
 	return m_config.sample_size;
 }
 
-inline uint16_t WavFile::get_bits_per_sample()
+inline uint16_t WavFile::get_bits_per_sample() const
 {
 	return m_config.precision;
 }
 
-inline uint32_t WavFile::get_period_count()
+inline uint32_t WavFile::get_period_count() const
 {
 	return m_periode_count;
 }
 
-inline uint32_t WavFile::get_period_size()
+inline uint32_t WavFile::get_period_size() const
 {
 	return m_periode_size;
 }
 
-inline uint32_t WavFile::get_speed()
+inline uint32_t WavFile::get_speed() const
 {
 	return m_config.speed;
 }
 
-inline size_t WavFile::length()
+inline size_t WavFile::length() const
 {
     return (m_config.data_length < 16) ?
         m_config.data_length :

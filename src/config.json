@@ -1,13 +1,13 @@
 {
+    "base_topic" : "myhouse/bell/otherbell",
     "mqtt-configuration": {
         "server": "mqtt",
         "port": 1883,
         "keepalive": 60,
-        "qos": 0,
-        "base_topic" : "myhouse/bell/nanobsd"
+        "qos": 0
     },
     "sound-configuration": {
         "device": "/dev/dsp",
-        "file_to_play" : "/usr/local/share/doorbell/DoorBell.wav"
+        "file_to_play" : "/home/manuel/devel/github/doorbell/data/DoorBell.wav"
     }
 }

@@ -11,9 +11,9 @@
 #include <sys/types.h>
 #include <err.h>
 
-#include <libgpio.h>
+#include <json/json.h>
 
-#include "sound.h"
+#include "doorbell.h"
 #include "mqtt.h"
 
 static void __attribute__((noreturn))
@@ -62,39 +62,19 @@ int main( int argc, char* argv[] )
         exit( 2 );
     }
 
-    root["sound-configuration"];
-    int pin;
-    int gpio;
+    MQTT mqtt(root["mqtt-configuration"]);
+    auto base_topic = root["base_topic"].asString();
 
-    if( spawn_sound_handler( gpio, pin, root["sound-configuration"] ) < 0 ) {
-        printf("Error during sound init, exiting\n");
-        return -3;
-    }
+    mqtt.add_callback( base_topic+"/foo", [](uint8_t*msg, size_t len){ printf("%s\n", msg); } );
 
-    if( setup_mqtt( gpio, pin, root["mqtt-configuration"] ) < 0 ) {
-        printf("Error during mqtt init, exiting\n");
-        return -4;
-    }
+    DoorBell bell(root["sound-configuration"]);
 
-    for(;;)
+    mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){ bell.ring(); } );
+
+    while( 1 )
     {
-        if( !run ){
-            printf("Stop Requested\n");
-            break;
-        }
-
-        int result = loop_mqtt();
-        if( result < 0 ) {
-            printf("Error Occured\n");
-            break;
-        }
+        mqtt.loop();
     }
-
-    printf("stop sound handler\n");
-    stop_sound_handler();
-
-    printf("stop mqtt\n");
-    stop_mqtt();
 
     return 0;
 }
