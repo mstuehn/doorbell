@@ -4,6 +4,8 @@
 #include <chrono>
 #include <thread>
 
+#include <unistd.h>
+
 using namespace std::chrono_literals;
 
 std::atomic<uint32_t> MQTT::s_RefCnt(0);
@@ -38,7 +40,10 @@ MQTT::MQTT(Json::Value config)
         mosquitto_lib_init();
     }
 
-    m_Mosq = mosquitto_new( "foo", true, this );
+    char hostname[80];
+    gethostname( hostname, sizeof(hostname) );
+
+    m_Mosq = mosquitto_new( hostname, true, this );
 
     auto host = config["server"].asString();
     auto port = config["port"].asInt();
