@@ -41,12 +41,20 @@ int main( int argc, char* argv[] )
     Json::Value root;
     Json::Reader rd;
     std::string config_filename = "/usr/local/etc/doorbell/config.json";
+    std::string config_devicename = "/dev/gpioc0";
+    int pin = 3;
 
     signed char ch;
-    while ((ch = getopt(argc, argv, "c:h")) != -1) {
+    while ((ch = getopt(argc, argv, "p:d:c:h")) != -1) {
         switch (ch) {
         case 'c':
             config_filename = std::string(optarg);
+            break;
+        case 'd':
+            config_devicename = std::string(optarg);
+            break;
+        case 'p':
+            pin = atoi(optarg);
             break;
         case 'h':
             usage();
@@ -76,12 +84,12 @@ int main( int argc, char* argv[] )
     mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){ bell.ring(); } );
 
 #if !defined(__amd64__) && !defined(__i386__)
-    std::thread gpiopoll([&bell, device, &keeprunning, pin](){
-            struct timespec poll = { .tv_sec = 0; .tv_nsec = 5000000; /*5ms*/ };
+    std::thread gpiopoll([&bell, &config_devicename, pin](){
+            struct timespec poll = { .tv_sec = 0, .tv_nsec = 5000000 /*5ms*/ };
             int old = 0;
 
-            gpio_handle_t handle = gpio_open_device(device);
-            if( handle == GPIO_INVALID_HANDLE) err(1, "gpio_open failed");
+            gpio_handle_t handle = gpio_open_device(config_devicename.c_str());
+            if( handle == GPIO_INVALID_HANDLE) exit(1);
 
             while(run) {
                 nanosleep(&poll, NULL);
