@@ -53,7 +53,7 @@ bool DoorBell::play_worker()
             }
             size_t n, bufsz = 256;
             uint8_t buf[bufsz];
-            while(1)
+            while(m_KeepRunning)
             {
                 if( sem_trywait( &m_EvenNotifier ) == 0 ) fd.reset();
 
