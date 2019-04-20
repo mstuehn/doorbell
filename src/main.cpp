@@ -11,14 +11,26 @@
 #include <sys/types.h>
 #include <err.h>
 
+#include "doorbell.h"
+#include "mqtt.h"
+
 #include <json/json.h>
 #if !defined(__amd64__) && !defined(__i386__)
 #include <libgpio.h>
 #include <thread>
-#endif
+#include <sstream>
+#include <iomanip>
+#include <ctime>
 
-#include "doorbell.h"
-#include "mqtt.h"
+static std::string now() {
+    auto t = std::time(nullptr);
+    std::tm tm = *std::localtime(&t);
+    std::stringstream wss;
+    wss << std::put_time(&tm, "%H:%M:%S %d-%m-%Y");
+    return wss.str();
+}
+
+#endif
 
 static void __attribute__((noreturn))
 usage(void)
@@ -84,7 +96,7 @@ int main( int argc, char* argv[] )
     mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){ bell.ring(); } );
 
 #if !defined(__amd64__) && !defined(__i386__)
-    std::thread gpiopoll([&bell, &config_devicename, pin](){
+    std::thread gpiopoll([&bell, &config_devicename, pin, &mqtt, &base_topic](){
             struct timespec poll = { .tv_sec = 0, .tv_nsec = 5000000 /*5ms*/ };
             int old = 0;
 
@@ -95,6 +107,13 @@ int main( int argc, char* argv[] )
                 nanosleep(&poll, NULL);
                 if( gpio_pin_get( handle, pin) == 1 && old == 0 ){
                     bell.ring();
+                    Json::StreamWriterBuilder wr;
+                    Json::Value info;
+                    info["date"] = now();
+                    info["doorbell"] = true;
+
+                    std::string msg = Json::writeString(wr, info);
+                    mqtt.publish(base_topic+"/ringed", msg.c_str(), msg.length(), 0 );
                     old = 1;
                 } else old = 0;
             }

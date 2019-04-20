@@ -10,6 +10,11 @@ using namespace std::chrono_literals;
 
 std::atomic<uint32_t> MQTT::s_RefCnt(0);
 
+bool MQTT::publish( std::string topic, const char* payload, size_t payloadlen, int qos ){
+    int mid;
+    return mosquitto_publish( m_Mosq, &mid, topic.c_str(), payloadlen, payload, qos, true ) == MOSQ_ERR_SUCCESS;
+}
+
 void MQTT::mqtt_msg_cb( struct mosquitto* mqtt, void* mqtt_new_data, const struct mosquitto_message* omsg )
 {
     std::string topic = std::string(omsg->topic);
