@@ -12,6 +12,10 @@
 #include <err.h>
 
 #include <json/json.h>
+#if !defined(__amd64__) && !defined(__i386__)
+#include <libgpio.h>
+#include <thread>
+#endif
 
 #include "doorbell.h"
 #include "mqtt.h"
@@ -71,10 +75,38 @@ int main( int argc, char* argv[] )
 
     mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){ bell.ring(); } );
 
+#if !defined(__amd64__) && !defined(__i386__)
+
+    std::thread gpiopoll([&bell, device, &keeprunning, pin](){
+            struct timespec poll = { .tv_sec = 0; .tv_nsec = 5000000; /*5ms*/ };
+            int old = 0;
+
+            gpio_handle_t handle = gpio_open_device(device);
+            if( handle == GPIO_INVALID_HANDLE) err(1, "gpio_open failed");
+
+            while(keeprunning) {
+                nanosleep(&poll, NULL);
+                if( gpio_pin_get( handle, pin) == 1 && old == 0 ){
+                    bell.ring();
+                    old = 1;
+                } else old = 0;
+            }
+
+            gpio_close( handle );
+
+            });
+
+#else
+#warning "GPIO only works on !amd64/!i386
+#endif
+
     while( 1 )
     {
         mqtt.loop();
     }
 
+#if !defined(__amd64__) && !defined(__i386__)
+
+#endif
     return 0;
 }
