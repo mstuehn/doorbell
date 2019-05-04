@@ -8,6 +8,6 @@
     },
     "sound-configuration": {
         "device": "/dev/dsp",
-        "file_to_play" : "/home/manuel/devel/github/doorbell/data/DoorBell.wav"
+        "file_to_play" : "/usr/local/share/doorbell/DoorBell.wav"
     }
 }
