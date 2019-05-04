@@ -33,7 +33,10 @@ LFLAGS =
 #COVERAGE_LIBS = -lHalibC
 #RELEASE_LIBS  = -lHalib
 
-LIBS = -lm -lmosquitto -ljsoncpp
+ARCH := $(shell uname -p)
+
+LIBS_aarch64 := -lgpio
+LIBS = -lm -lmosquitto -ljsoncpp $(LIBS_$(ARCH))
 
 .PHONY: $(SUBPROJECTS)
 $(SUBPROJECTS):
