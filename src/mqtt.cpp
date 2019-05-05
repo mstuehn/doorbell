@@ -45,10 +45,7 @@ MQTT::MQTT(Json::Value config)
         mosquitto_lib_init();
     }
 
-    char hostname[80];
-    gethostname( hostname, sizeof(hostname) );
-
-    m_Mosq = mosquitto_new( hostname, true, this );
+    m_Mosq = mosquitto_new( nullptr, true, this );
 
     auto host = config["server"].asString();
     auto port = config["port"].asInt();
