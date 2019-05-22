@@ -15,8 +15,8 @@
 #include "mqtt.h"
 
 #include <json/json.h>
-#if !defined(__amd64__) && !defined(__i386__)
-#include <libgpio.h>
+
+#include <libevdev/libevdev.h>
 #include <thread>
 #include <sstream>
 #include <iomanip>
@@ -30,43 +30,28 @@ static std::string now() {
     return wss.str();
 }
 
-#endif
-
 static void __attribute__((noreturn))
 usage(void)
 {
-    printf("usage: %s [-c] config-file\n", getprogname());
-	exit(1);
+    printf("usage: %s [-d evdev-device] [-c config-file]\n", getprogname());
+    exit(1);
 }
-
-static bool run = true;
 
 int main( int argc, char* argv[] )
 {
-    signal( SIGINT, [](int sig){
-                        std::cout
-                            << "CTR-C pressed"
-                            << std::endl;
-                        run = false;
-                    });
-
     Json::Value root;
     Json::Reader rd;
     std::string config_filename = "/usr/local/etc/doorbell/config.json";
-    std::string config_devicename = "/dev/gpioc0";
-    int pin = 3;
+    std::string config_devicename = "/dev/input/event7";
 
     signed char ch;
-    while ((ch = getopt(argc, argv, "p:d:c:h")) != -1) {
+    while ((ch = getopt(argc, argv, "d:c:h")) != -1) {
         switch (ch) {
         case 'c':
             config_filename = std::string(optarg);
             break;
         case 'd':
             config_devicename = std::string(optarg);
-            break;
-        case 'p':
-            pin = atoi(optarg);
             break;
         case 'h':
             usage();
@@ -89,55 +74,54 @@ int main( int argc, char* argv[] )
     MQTT mqtt(root["mqtt-configuration"]);
     auto base_topic = root["base_topic"].asString();
 
-    mqtt.add_callback( base_topic+"/foo", [](uint8_t*msg, size_t len){ printf("%s\n", msg); } );
-
     DoorBell bell(root["sound-configuration"]);
 
     mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){ bell.ring(); } );
 
-#if !defined(__amd64__) && !defined(__i386__)
-    std::thread gpiopoll([&bell, &config_devicename, pin, &mqtt, &base_topic](){
-            struct timespec poll = { .tv_sec = 0, .tv_nsec = 5000000 /*5ms*/ };
-            int old = 0;
-            int debounce = 10;
+    std::thread evdevpoll([&bell, &config_devicename, &mqtt, &base_topic](){
+            struct libevdev *dev = NULL;
+            int fd;
+            int rc = 1;
 
-            gpio_handle_t handle = gpio_open_device(config_devicename.c_str());
-            if( handle == GPIO_INVALID_HANDLE) exit(1);
-
-            while(run) {
-                nanosleep(&poll, NULL);
-
-                if( gpio_pin_get(handle, pin) == 1 ) {
-                    if( debounce > 0 ) debounce--;
-                } else debounce = 10;
-
-                if( debounce == 10 && old == 1 ) old = 0;
-                if( debounce ==  0 && old == 0 ) {
-
-                    bell.ring();
-
-                    Json::StreamWriterBuilder wr;
-                    Json::Value info;
-                    info["date"] = now();
-                    info["doorbell"] = true;
-
-                    std::string msg = Json::writeString(wr, info);
-                    mqtt.publish(base_topic+"/ringed", msg.c_str(), msg.length(), 0 );
-                    old = 1;
-                }
+            fd = open(config_devicename.c_str(), O_RDONLY);
+            rc = libevdev_new_from_fd(fd, &dev);
+            if (rc < 0) {
+                fprintf(stderr, "Failed to init libevdev (%s)\n", strerror(-rc));
+                exit(1);
             }
+            printf("Input device name: \"%s\"\n", libevdev_get_name(dev));
+            printf("Input device ID: bus %#x vendor %#x product %#x\n",
+                    libevdev_get_id_bustype(dev),
+                    libevdev_get_id_vendor(dev),
+                    libevdev_get_id_product(dev));
+            do {
+                struct input_event ev;
+                rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_BLOCKING, &ev);
+                if( rc == 0 )
+                {
+                    printf("Event: %s %s %d\n",
+                            libevdev_event_type_get_name(ev.type),
+                            libevdev_event_code_get_name(ev.type, ev.code),
+                            ev.value);
+                    if( ev.type == EV_KEY && ev.value == 1 ){
+                        bell.ring();
 
-            gpio_close( handle );
+                        Json::StreamWriterBuilder wr;
+                        Json::Value info;
+                        info["date"] = now();
+                        info["doorbell"] = true;
 
-            });
-#endif
+                        std::string msg = Json::writeString(wr, info);
+                        mqtt.publish(base_topic+"/ringed", msg.c_str(), msg.length(), 0 );
+                    }
+                }
+            } while( rc == 1 || rc == 0 || rc == -EAGAIN );
+    });
 
-    while(run) mqtt.loop();
+    while(1) mqtt.loop();
 
     printf("Exit program\n");
 
-#if !defined(__amd64__) && !defined(__i386__)
-    gpiopoll.join();
-#endif
+    evdevpoll.join();
     return 0;
 }

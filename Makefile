@@ -10,7 +10,7 @@ INCDIRS = 	-I /usr/local/include \
 			-I include \
 			-I /usr/local/include/jsoncpp \
 			-I. \
-			-I /usr/src.local/lib/libgpio \
+			-I /usr/local/include/libevdev-1.0 \
 			$(EXT_INCDIRS)
 
 
@@ -35,8 +35,8 @@ LFLAGS =
 
 ARCH := $(shell uname -p)
 
-LIBS_aarch64 := -lgpio
-LIBS = -lm -lmosquitto -ljsoncpp $(LIBS_$(ARCH))
+#LIBS_aarch64 := -lgpio
+LIBS = -lm -lmosquitto -ljsoncpp -levdev $(LIBS_$(ARCH))
 
 .PHONY: $(SUBPROJECTS)
 $(SUBPROJECTS):
