@@ -111,7 +111,7 @@ int main( int argc, char* argv[] )
                                     libevdev_get_id_bustype(dev),
                                     vendor,
                                     product );
-                            if( vendor == 0x25 && product == 0x1 ){
+                            if( vendor == 0x1b4f && product == 0x9203 ){
                                 evdev_found = true;
                                 std::cout << "Found suitable input device" << std::endl;
                                 break;
