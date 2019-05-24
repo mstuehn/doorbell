@@ -133,11 +133,7 @@ int main( int argc, char* argv[] )
                 rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_BLOCKING, &ev);
                 if( rc == 0 )
                 {
-                    printf("Event: %s %s %d\n",
-                            libevdev_event_type_get_name(ev.type),
-                            libevdev_event_code_get_name(ev.type, ev.code),
-                            ev.value);
-                    if( ev.type == EV_KEY && ev.code == KEY_F24 && ev.value == 1 )
+                    if( libevdev_event_is_code( &ev, EV_KEY, KEY_F24) && ev.value == 1 )
                     {
                         bell.ring();
 
@@ -148,6 +144,9 @@ int main( int argc, char* argv[] )
 
                         std::string msg = Json::writeString(wr, info);
                         mqtt.publish(base_topic+"/ringed", msg.c_str(), msg.length(), 0 );
+                    } else if( libevdev_event_is_code( &ev, EV_KEY, KEY_F23) && ev.value == 1 )
+                    {
+                        printf("Lifesign\n");
                     }
                 }
             } while( rc == 1 || rc == 0 || rc == -EAGAIN );
