@@ -1,5 +1,9 @@
 {
     "base_topic" : "myhouse/bell/otherbell",
+    "input": {
+        "vendor" : "0x1b4f",
+        "product" : "0x9203"
+    },
     "mqtt-configuration": {
         "server": "mqtt",
         "port": 1883,
