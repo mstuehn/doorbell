@@ -76,7 +76,16 @@ int main( int argc, char* argv[] )
 
     mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){ bell.ring(); } );
 
-    std::thread evdevpoll([&bell, &mqtt, &base_topic](){
+    uint32_t vendor_number;
+    sscanf(root["input"]["vendor"].asString().c_str(), "%x", &vendor_number);
+
+    uint32_t product_number;
+    sscanf(root["input"]["product"].asString().c_str(), "%x", &product_number);
+
+    std::cout << "Compatible Vendor/Product:  0x" << std::hex << vendor_number
+              << "/0x" << product_number << std::dec << std::endl;
+
+    std::thread evdevpoll([&bell, &mqtt, &base_topic, product_number, vendor_number](){
             struct libevdev *dev = NULL;
             int fd = -1;
             int rc = 1;
@@ -111,11 +120,13 @@ int main( int argc, char* argv[] )
                                     libevdev_get_id_bustype(dev),
                                     vendor,
                                     product );
-                            if( vendor == 0x1b4f && product == 0x9203 ){
+                            if( vendor == vendor_number && product == product_number ){
                                 evdev_found = true;
                                 std::cout << "Found suitable input device" << std::endl;
                                 break;
                             } else {
+                                std::cout << "Not suitable: vendor: 0x" << std::hex << vendor_number
+                                          << " product: 0x" << product_number << std::dec <<std::endl;
                                 libevdev_free( dev );
                                 close(fd);
                             }
