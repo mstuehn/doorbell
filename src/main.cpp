@@ -24,6 +24,9 @@
 #include <iomanip>
 #include <ctime>
 
+#include <iomanip>
+#include <chrono>
+
 static std::string now() {
     auto t = std::time(nullptr);
     std::tm tm = *std::localtime(&t);
@@ -157,7 +160,10 @@ int main( int argc, char* argv[] )
                         mqtt.publish(base_topic+"/ringed", msg.c_str(), msg.length(), 0 );
                     } else if( libevdev_event_is_code( &ev, EV_KEY, KEY_F23) && ev.value == 1 )
                     {
-                        printf("Lifesign\n");
+                        using std::chrono::system_clock;
+                        std::time_t now = system_clock::to_time_t( system_clock::now() );
+                        struct std::tm *pnow = std::localtime(&now);
+                        std::cout << std::put_time( pnow, "[%F %T] " ) << "Lifesign" << std::endl;
                     }
                 }
             } while( rc == 1 || rc == 0 || rc == -EAGAIN );
