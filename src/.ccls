@@ -1,8 +1,0 @@
-clang
-%c -std=c11
-%cpp -std=c++11
--I.
--I /usr/include
--I /usr/local/include
--I /usr/local/include/jsoncpp
-%h c++-header
