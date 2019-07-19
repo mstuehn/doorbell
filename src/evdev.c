@@ -40,7 +40,7 @@ does_device_match( int fd, int vendor, int product )
 }
 
 char*
-scan_devices( uint16_t vendor, uint16_t product ) 
+scan_devices( uint16_t vendor, uint16_t product )
 {
     printf("Scanning for compatible Vendor/Product:  0x%04X/0x%04X\n", vendor, product );
 
@@ -96,9 +96,8 @@ get_events(int fd, uint16_t type, uint16_t* code, uint16_t* value)
         return false;
     }
 
-
-    printf("Event: time %ld.%06ld, ", ev.time.tv_sec, ev.time.tv_usec);
-    printf("type: %i, code: %i, value: %i\n", ev.type, ev.code, ev.value);
+    //printf("Event: time %ld.%06ld, ", ev.time.tv_sec, ev.time.tv_usec);
+    //printf("type: %i, code: %i, value: %i\n", ev.type, ev.code, ev.value);
 
     if( type != ev.type ) return false;
 
