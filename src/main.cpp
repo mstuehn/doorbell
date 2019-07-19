@@ -116,15 +116,13 @@ int main( int argc, char* argv[] )
                     switch( code ) {
                         case KEY_F24:
                         {
-                            std::cout << " ---------- DING ----------- " << std::endl;
-
-                                //bell.ring();
-                                //Json::StreamWriterBuilder wr;
-                                //Json::Value info;
-                                //info["date"] = now();
-                                //info["doorbell"] = true;
-                                //std::string msg = Json::writeString(wr, info);
-                                //mqtt.publish(base_topic+"/ringed", msg.c_str(), msg.length(), 0 );
+                            bell.ring();
+                            Json::StreamWriterBuilder wr;
+                            Json::Value info;
+                            info["date"] = now();
+                            info["doorbell"] = true;
+                            std::string msg = Json::writeString(wr, info);
+                            mqtt.publish(base_topic+"/ringed", msg.c_str(), msg.length(), 0 );
                         } break;
 
                         case KEY_F23:
