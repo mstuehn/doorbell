@@ -13,6 +13,7 @@ bool DoorBell::ring()
 }
 
 DoorBell::DoorBell( Json::Value& config ) //: m_PlayWorker( &DoorBell::play_worker, this )
+    : m_DataSize(256)
 {
     m_KeepRunning = true;
     if( sem_init( &m_EvenNotifier, 0, 0 ) == -1 ) {
@@ -22,6 +23,7 @@ DoorBell::DoorBell( Json::Value& config ) //: m_PlayWorker( &DoorBell::play_work
     m_PlayWorker = std::thread( &DoorBell::play_worker, this );
     m_FileToPlay = config["file_to_play"].asString();
     m_SoundDevice = config["device"].asString();
+    m_DataBuf = new uint8_t[m_DataSize];
 }
 
 DoorBell::~DoorBell()
@@ -33,6 +35,7 @@ DoorBell::~DoorBell()
     m_PlayWorker.join();
 
     sem_destroy( &m_EvenNotifier );
+    delete [] m_DataBuf;
 }
 
 bool DoorBell::play_worker()
@@ -51,13 +54,12 @@ bool DoorBell::play_worker()
                     perror("Error during open");
                     return false;
             }
-            size_t n, bufsz = 256;
-            uint8_t buf[bufsz];
+            size_t n;
             while(m_KeepRunning)
             {
                 if( sem_trywait( &m_EvenNotifier ) == 0 ) fd.reset();
 
-                int len = fd.read( buf, bufsz );
+                int len = fd.read( m_DataBuf, m_DataSize );
 
                 if( len < 0 ) {
                     perror( "Error during read" );
@@ -66,7 +68,7 @@ bool DoorBell::play_worker()
 
                 if( len == 0 ) break;
 
-                n = sndfd.write( buf, len );
+                n = sndfd.write( m_DataBuf, len );
                 if( n==0 ) {
                     perror("Error during write");
                     return false;
