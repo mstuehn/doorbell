@@ -65,7 +65,6 @@ scan_devices( uint16_t vendor, uint16_t product )
             if( does_device_match( fd, vendor, product )) {
                 printf("Device found: %s \n", fname );
                 found = true;
-                break;
             }
             close(fd);
         }
