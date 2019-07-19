@@ -1,2 +1,0 @@
-doorbell.full: /usr/lib/libc.a
-doorbell.full: /usr/lib/libc++.a
