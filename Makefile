@@ -3,7 +3,7 @@ APPLICATION = bin/doorbell
 -include externals/*.mk
 
 OBJS = main.o
-OBJS += sounddev.o wavfile.o doorbell.o mqtt.o
+OBJS += sounddev.o wavfile.o doorbell.o mqtt.o evdev.o
 OBJS += $(EXT_OBJS)
 
 INCDIRS = 	-I /usr/local/include \
