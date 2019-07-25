@@ -27,6 +27,8 @@
 #include <iomanip>
 #include <chrono>
 
+#include "utils.h"
+
 static std::string now() {
     auto t = std::time(nullptr);
     std::tm tm = *std::localtime(&t);
@@ -47,6 +49,7 @@ int main( int argc, char* argv[] )
     Json::Value root;
     Json::Reader rd;
     std::string config_filename = "/usr/local/etc/doorbell/config.json";
+    std::cout << "Starting " << std::endl;
 
     signed char ch;
     while ((ch = getopt(argc, argv, "c:h")) != -1) {
@@ -71,13 +74,16 @@ int main( int argc, char* argv[] )
         std::cerr << "Error during reading " << config_filename << std::endl;
         exit( 2 );
     }
+    std::cout << "Parsing Ok" << std::endl;
 
     MQTT mqtt(root["mqtt-configuration"]);
     auto base_topic = root["base_topic"].asString();
 
     DoorBell bell(root["sound-configuration"]);
+    std::cout << "Doorbell initialized" << std::endl;
 
     mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){ bell.ring(); } );
+    std::cout << "Callback added" << std::endl;
 
     uint32_t vendor_number;
     sscanf(root["input"]["vendor"].asString().c_str(), "%x", &vendor_number);
@@ -137,17 +143,18 @@ int main( int argc, char* argv[] )
                     }
                     closedir( eventdir );
                 } else {
-                            fprintf(stderr, "Failed to init libevdev (%s)\n", strerror(-rc));
-                            exit(1);
+                    fprintf(stderr, "Failed to init libevdev (%s)\n", strerror(-rc));
+                    exit(1);
                 }
             } while( !evdev_found );
 
+            printf("dev %p\n", &dev );
             do {
                 struct input_event ev;
                 rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_BLOCKING, &ev);
                 if( rc == 0 )
                 {
-                    if( libevdev_event_is_code( &ev, EV_KEY, KEY_F24) && ev.value == 1 )
+                    if( libevdev_event_is_code( &ev, EV_KEY, KEY_F23) && ev.value == 1 )
                     {
                         bell.ring();
 
@@ -158,7 +165,8 @@ int main( int argc, char* argv[] )
 
                         std::string msg = Json::writeString(wr, info);
                         mqtt.publish(base_topic+"/ringed", msg.c_str(), msg.length(), 0 );
-                    } else if( libevdev_event_is_code( &ev, EV_KEY, KEY_F23) && ev.value == 1 )
+                        std::cout << " -- Ring -- " << std::endl;
+                    } else if( libevdev_event_is_code( &ev, EV_KEY, KEY_F24) && ev.value == 1 )
                     {
                         using std::chrono::system_clock;
                         std::time_t now = system_clock::to_time_t( system_clock::now() );
@@ -167,7 +175,10 @@ int main( int argc, char* argv[] )
                     }
                 }
             } while( rc == 1 || rc == 0 || rc == -EAGAIN );
+	    std::cout << "Leaving thread with code " << strerror(rc) << std::endl;
     });
+    pthread_set_name_np( evdevpoll.native_handle(), "Poll" );
+    pthread_set_name_np( pthread_self(), "main-loop" );
 
     while(1) mqtt.loop();
 

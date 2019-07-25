@@ -1,11 +1,13 @@
 #include "doorbell.h"
 
 #include <iostream>
+#include <unistd.h>
 
 #include <sys/soundcard.h>
 #include <fcntl.h>
 
 #include "sounddev.h"
+#include "utils.h"
 
 bool DoorBell::ring()
 {
@@ -20,6 +22,7 @@ DoorBell::DoorBell( Json::Value& config ) //: m_PlayWorker( &DoorBell::play_work
         exit(1);
     }
     m_PlayWorker = std::thread( &DoorBell::play_worker, this );
+    pthread_set_name_np( m_PlayWorker.native_handle(), "DoorBeller" );
     m_FileToPlay = config["file_to_play"].asString();
     m_SoundDevice = config["device"].asString();
 }
@@ -38,9 +41,11 @@ DoorBell::~DoorBell()
 bool DoorBell::play_worker()
 {
     WavFile fd;
+    print_guard();
 
     while(m_KeepRunning)
     {
+        std::cout << "Waiting for events" << std::endl;
         int result = sem_wait(&m_EvenNotifier);
         if( result != 0 || !m_KeepRunning ) return false;
 
@@ -50,9 +55,10 @@ bool DoorBell::play_worker()
             if( !sndfd.open() ) {
                     perror("Error during open");
                     return false;
-            }
-            size_t n, bufsz = 256;
+            } else std::cout << "Device open" << std::endl;
+            size_t bufsz = 256;
             uint8_t buf[bufsz];
+	    printf("%p - %p\n", buf, buf+256 );
             while(m_KeepRunning)
             {
                 if( sem_trywait( &m_EvenNotifier ) == 0 ) fd.reset();
@@ -66,7 +72,7 @@ bool DoorBell::play_worker()
 
                 if( len == 0 ) break;
 
-                n = sndfd.write( buf, len );
+                size_t n = sndfd.write( buf, len );
                 if( n==0 ) {
                     perror("Error during write");
                     return false;

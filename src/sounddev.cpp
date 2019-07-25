@@ -15,6 +15,7 @@ SoundDevice::~SoundDevice()
 
 bool SoundDevice::open()
 {
+   printf("Going to open \n");
     m_fd = ::open( m_Device.c_str(), O_WRONLY );
     if( m_fd < 0) {
         printf("Open of %s failed %d\n", m_Device.c_str(), m_fd);
@@ -67,6 +68,7 @@ bool SoundDevice::open()
         return false;
     }
 #endif
+   printf("Device opened\n");
 
     return (m_fd != -1);
 }

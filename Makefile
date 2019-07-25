@@ -1,4 +1,5 @@
 APPLICATION = bin/doorbell
+#COMPILER_VERSION=8
 
 -include externals/*.mk
 
@@ -17,7 +18,7 @@ INCDIRS = 	-I /usr/local/include \
 LIBDIRS = -L /usr/local/lib
 LIBDIRS += $(EXT_LIBDIRS)
 
-DBGFLAGS = -g3 -O0
+DBGFLAGS = -g3 -O2 # -g3
 PRFFLAGS =
 CVRFLAGS =
 OPTFLAGS = -O3 -Wno-uninitialized
