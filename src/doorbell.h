@@ -26,9 +26,6 @@ class DoorBell {
         DoorBell() = delete;
         bool play_worker();
 
-        uint8_t* m_DataBuf;
-        const size_t m_DataSize;
-
         std::string m_FileToPlay;
         std::string m_SoundDevice;
 
