@@ -27,7 +27,7 @@ void MQTT::mqtt_msg_cb( struct mosquitto* mqtt, void* mqtt_new_data, const struc
 
     MQTT *myself = (MQTT *)mqtt_new_data;
 
-    for( auto item: myself->m_TopicList)
+    for( auto item: myself->m_TopicList )
     {
         bool match;
         mosquitto_topic_matches_sub( item.topic.c_str(),
@@ -91,6 +91,18 @@ int MQTT::loop()
             std::this_thread::sleep_for( 1s );
             result = mosquitto_reconnect( m_Mosq );
             std::cerr << "Connection lost, try to reconnect: " << result << std::endl;
+            if( result == MOSQ_ERR_SUCCESS )
+            {
+                std::cerr << "Reconnection ok, re-subscribe topics" << std::endl;
+                for( auto item: m_TopicList )
+                {
+                    result = mosquitto_subscribe( m_Mosq, NULL, item.topic.c_str(), 0 );
+                    if( result == MOSQ_ERR_SUCCESS )
+                        std::cerr << "Re-Subscription " << item.topic << " OK" << std::endl;
+                    else
+                        std::cerr << "Re-Subscription " << item.topic << " FAILED" << std::endl;
+                }
+            }
             break;
         default:
             std::cerr << "Error during mqtt operation: " << result << std::endl;
