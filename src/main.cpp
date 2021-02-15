@@ -103,11 +103,13 @@ int main( int argc, char* argv[] )
                     return;
             }
 
+#if 0
             int grabbed = ioctl( fd, EVIOCGRAB, (void*) 1 );
             if( grabbed ) {
                     fprintf(stderr, "Already grabbed by another process\n" );
                     return;
             }
+#endif
 
             while( 1 ) {
                 uint16_t code, value;
