@@ -91,9 +91,9 @@ int MQTT::loop()
             std::this_thread::sleep_for( 1s );
             result = mosquitto_reconnect( m_Mosq );
             std::cerr << "Connection lost, try to reconnect: " << result << std::endl;
-            for( topic : m_TopicList ) {
-                if( mosquitto_subscribe( m_Mosq, NULL, topic.topic, 0 ) < 0 ) {
-                    std::cerr << "failed to subscribe mqtt to " << topic << std::endl;
+            for( auto item: m_TopicList ) {
+                if( mosquitto_subscribe( m_Mosq, NULL, item.topic.c_str(), 0 ) < 0 ) {
+                    std::cerr << "failed to subscribe mqtt to " << item.topic << std::endl;
                 }
             }
             break;
