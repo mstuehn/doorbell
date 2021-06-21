@@ -46,11 +46,12 @@
 
 #define RIFF_MAGIC  'RIFF'
 #define RIFF_TYPE   'WAVE'
-#define RIFF_FORMAT 'fmt'
+#define RIFF_FORMAT 6712692 // 'fmt'
 #define RIFF_DATA   'data'
 
 #define FAIL 0
 
+#if 0
 static void print_riff_header(riff_header_t *headp)
 {
     printf("       magic = %d\n", headp->magic);
@@ -67,6 +68,7 @@ static void print_riff_header(riff_header_t *headp)
     printf("  chunk_data = %d\n", headp->chunk_data);
     printf(" data_length = %d\n", headp->data_length);
 }
+#endif
 
 WavFile::WavFile() : m_periode_size(1024), m_periode_count(4) {
 }
