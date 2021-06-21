@@ -45,7 +45,8 @@ usage(void)
 int main( int argc, char* argv[] )
 {
     Json::Value root;
-    Json::Reader rd;
+    Json::CharReaderBuilder builder;
+    JSONCPP_STRING errs;
     std::string config_filename = "/usr/local/etc/doorbell/config.json";
 
     signed char ch;
@@ -64,11 +65,11 @@ int main( int argc, char* argv[] )
     argv += optind;
 
     std::ifstream config( config_filename, std::ifstream::binary);
-    bool parsingOk = rd.parse(config, root, false);
+    bool parsingOk = parseFromStream( builder, config, &root, &errs );
 
     if( !parsingOk )
     {
-        std::cerr << "Error during reading " << config_filename << std::endl;
+        std::cerr << "Error during reading " << config_filename << " : " << errs << std::endl;
         exit( 2 );
     }
 
