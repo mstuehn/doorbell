@@ -38,7 +38,11 @@ static std::string now() {
 static void __attribute__((noreturn))
 usage(void)
 {
+#if defined(__FreeBSD__)
     printf("usage: %s [-d evdev-device] [-c config-file]\n", getprogname());
+#else
+    printf("usage: [-d evdev-device] [-c config-file]\n");
+#endif
     exit(1);
 }
 

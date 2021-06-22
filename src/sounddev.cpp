@@ -1,6 +1,7 @@
 #include <sys/soundcard.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 
 #include "sounddev.h"
 SoundDevice::SoundDevice( std::string& device, WavFile& wav ) : m_Device(device), m_File(wav)

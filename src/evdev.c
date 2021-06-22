@@ -53,7 +53,7 @@ scan_devices( uint16_t vendor, uint16_t product )
 
     printf("Available devices:\n");
 
-    char fname[64];
+    char fname[384];
     bool found = false;
     for( int i = 0; i < ndev && !found; i++) {
         char name[256] = "???";
