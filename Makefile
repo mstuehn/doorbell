@@ -8,6 +8,7 @@ OBJS += $(EXT_OBJS)
 
 INCDIRS = 	-I /usr/local/include \
 			-I include \
+			-I /usr/include/jsoncpp \
 			-I /usr/local/include/jsoncpp \
 			-I. \
 			$(EXT_INCDIRS)
