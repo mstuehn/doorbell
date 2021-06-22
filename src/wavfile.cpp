@@ -44,10 +44,10 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 
-#define RIFF_MAGIC  'RIFF'
-#define RIFF_TYPE   'WAVE'
-#define RIFF_FORMAT 6712692 // 'fmt'
-#define RIFF_DATA   'data'
+#define RIFF_MAGIC  1380533830 //'RIFF'
+#define RIFF_TYPE   1463899717 //'WAVE'
+#define RIFF_FORMAT 6712692    // 'fmt'
+#define RIFF_DATA   1684108385 //'data'
 
 #define FAIL 0
 
