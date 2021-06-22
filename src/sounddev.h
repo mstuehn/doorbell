@@ -8,7 +8,7 @@ class SoundDevice
     public:
         SoundDevice( std::string& device, WavFile& );
         bool open();
-        bool write( const uint8_t*, size_t len );
+        bool write( const uint8_t*, ssize_t len );
         bool close();
 
         virtual ~SoundDevice();
