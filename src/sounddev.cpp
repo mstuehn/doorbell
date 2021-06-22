@@ -72,7 +72,7 @@ bool SoundDevice::open()
     return (m_fd != -1);
 }
 
-bool SoundDevice::write(const uint8_t *buf, size_t len)
+bool SoundDevice::write(const uint8_t *buf, ssize_t len)
 {
     return (len == ::write(m_fd, buf, len) );
 }
