@@ -68,7 +68,7 @@ int main( int argc, char* argv[] )
     argc -= optind;
     argv += optind;
 
-    std::ifstream config( config_filename, std::ifstream::binary);
+    std::ifstream config( config_filename, std::ifstream::binary );
     bool parsingOk = parseFromStream( builder, config, &root, &errs );
 
     if( !parsingOk )
@@ -77,14 +77,14 @@ int main( int argc, char* argv[] )
         exit( 2 );
     }
 
-    MQTT mqtt(root["mqtt-configuration"]);
+    MQTT mqtt( root["mqtt-configuration"] );
     auto base_topic = root["base_topic"].asString();
 
-    DoorBell bell(root["sound-configuration"]);
+    DoorBell bell( root["sound-configuration"] );
 
     mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){ bell.ring(); } );
 
-    std::thread evdevpoll([&bell, &mqtt, &base_topic, &root ](){
+    std::thread evdevpoll( [&bell, &mqtt, &base_topic, &root ](){
             uint32_t vendor_number;
             sscanf(root["input"]["vendor"].asString().c_str(), "%x", &vendor_number);
 
