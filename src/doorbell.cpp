@@ -54,6 +54,10 @@ bool DoorBell::play_worker()
                     perror("Error during open");
                     return false;
             }
+            if( !sndfd.volume(250, 250) ) {
+                    perror("Error during setting volume");
+                    return false;
+            }
             size_t n;
             while(m_KeepRunning)
             {
@@ -74,6 +78,7 @@ bool DoorBell::play_worker()
                     return false;
                 }
             }
+            sndfd.volume(0, 0);
         }
     }
 
