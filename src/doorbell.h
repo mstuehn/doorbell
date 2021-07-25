@@ -31,6 +31,7 @@ class DoorBell {
 
         std::string m_FileToPlay;
         std::string m_SoundDevice;
+        std::string m_MixerDevice;
 
         std::thread m_PlayWorker;
         sem_t m_EvenNotifier;
