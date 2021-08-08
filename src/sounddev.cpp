@@ -78,8 +78,8 @@ bool SoundDevice::volume( uint8_t left, uint8_t right )
     }
 
     int vol = left | right << 8;
-    if( ioctl( fd, SNDCTL_DSP_SETPLAYVOL, vol) < 0 ) {
-        printf("SNDCTL_DSP_SETPLAYVOL failed %d\n", fd );
+    if( ioctl( fd, SOUND_MIXER_WRITE_PCM, &vol) < 0 ) {
+        printf("Setting volume failed failed %d\n", fd );
         return false;
     }
 
