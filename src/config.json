@@ -12,7 +12,6 @@
     },
     "sound-configuration": {
         "device": "/dev/dsp",
-        "mixer" : "/dev/mixer",
         "file_to_play" : "data/DoorBell.wav"
     }
 }
