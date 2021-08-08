@@ -55,7 +55,7 @@ bool DoorBell::play_worker()
                     perror("Error during open");
                     return false;
             }
-            if( !sndfd.volume(250, 250) ) {
+            if( !sndfd.volume(80, 80) ) {
                     perror("Error during setting volume");
                     return false;
             }
