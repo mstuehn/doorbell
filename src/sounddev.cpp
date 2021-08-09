@@ -3,10 +3,6 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 
-#if !defined(__FreeBSD__)
-#define SNDCTL_DSP_SETPLAYVOL   _IOWR('P', 24, int)
-#endif
-
 #include "sounddev.h"
 SoundDevice::SoundDevice( std::string device, std::string mixer, WavFile& wav )
     : m_Device(device), m_Mixer(mixer), m_File(wav)
