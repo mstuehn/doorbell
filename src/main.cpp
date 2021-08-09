@@ -82,7 +82,10 @@ int main( int argc, char* argv[] )
 
     DoorBell bell( root["sound-configuration"] );
 
-    mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){ bell.ring(); } );
+    mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){
+            printf("Ring due to mqtt-message\n");
+            bell.ring();
+            } );
 
     std::thread evdevpoll( [&bell, &mqtt, &base_topic, &root ](){
             uint32_t vendor_number;
