@@ -23,7 +23,6 @@ DoorBell::DoorBell( Json::Value& config ) //: m_PlayWorker( &DoorBell::play_work
     m_PlayWorker = std::thread( &DoorBell::play_worker, this );
     m_FileToPlay = config["file_to_play"].asString();
     m_SoundDevice = config["device"].asString();
-    m_MixerDevice = config["mixer"].asString();
     m_DataBuf = new uint8_t[m_DataSize];
 }
 
@@ -50,7 +49,7 @@ bool DoorBell::play_worker()
 
         if( fd.open( m_FileToPlay ) != -1 )
         {
-            SoundDevice sndfd( m_SoundDevice, m_MixerDevice, fd );
+            SoundDevice sndfd( m_SoundDevice, fd );
             if( !sndfd.open() ) {
                     perror("Error during open");
                     return false;

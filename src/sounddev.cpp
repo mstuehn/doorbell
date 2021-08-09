@@ -4,7 +4,7 @@
 #include <sys/ioctl.h>
 
 #include "sounddev.h"
-SoundDevice::SoundDevice( std::string device, std::string mixer, WavFile& wav )
+SoundDevice::SoundDevice( std::string device, WavFile& wav )
     : m_Device(device), m_File(wav), m_fd(-1)
 {
 

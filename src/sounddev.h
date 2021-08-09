@@ -6,7 +6,7 @@
 class SoundDevice
 {
     public:
-        SoundDevice( std::string device, std::string mixer, WavFile& );
+        SoundDevice( std::string device, WavFile& );
         bool open();
         bool write( const uint8_t*, ssize_t len );
         bool close();
