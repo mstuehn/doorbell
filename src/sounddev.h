@@ -17,7 +17,6 @@ class SoundDevice
 
     private:
         const std::string m_Device;
-        const std::string m_Mixer;
         const WavFile& m_File;
 
         int m_fd;

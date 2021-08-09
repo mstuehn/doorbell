@@ -5,7 +5,7 @@
 
 #include "sounddev.h"
 SoundDevice::SoundDevice( std::string device, std::string mixer, WavFile& wav )
-    : m_Device(device), m_Mixer(mixer), m_File(wav)
+    : m_Device(device), m_File(wav), m_fd(-1)
 {
 
 }
@@ -67,15 +67,10 @@ bool SoundDevice::open()
 
 bool SoundDevice::volume( uint8_t left, uint8_t right )
 {
-    int fd = ::open( m_Mixer.c_str(), O_WRONLY );
-    if( fd < 0) {
-        printf("Open of %s failed %d\n", m_Mixer.c_str(), m_fd);
-        return false;
-    }
-
-    int vol = left | right << 8;
-    if( ioctl( fd, SOUND_MIXER_WRITE_PCM, &vol) < 0 ) {
-        printf("Setting volume failed failed %d\n", fd );
+    int vol = (left > 100? 100: left) |
+              (right > 100? 100: right) << 8;
+    if( ioctl( m_fd, SOUND_MIXER_WRITE_PCM, &vol ) < 0 ) {
+        printf("Setting volume failed failed with %i\n", errno );
         return false;
     }
 
