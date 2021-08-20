@@ -11,30 +11,36 @@
 #include <linux/input.h>
 
 #include <string>
+#include <filesystem>
+#include <iostream>
 
 #define DEV_INPUT_EVENT "/dev/input"
 #define EVENT_DEV_NAME "event"
 
-static int
-is_event_device(const struct dirent *dir) {
-    return strncmp(EVENT_DEV_NAME, dir->d_name, 5) == 0;
-}
+//static int
+//is_event_device(const struct dirent *dir) {
+//    return strncmp(EVENT_DEV_NAME, dir->d_name, 5) == 0;
+//}
 
-static bool
-does_device_match( int fd, int vendor, int product )
+static bool does_device_match( int fd, int vendor, int product )
 {
     int version;
-    unsigned short id[4];
+    uint16_t id[4];
 
-    if (ioctl(fd, EVIOCGVERSION, &version)) {
+    if( ioctl(fd, EVIOCGVERSION, &version) ) {
         perror("can't get version");
-        return 1;
+    } else {
+        printf("Input driver version is %d.%d.%d\n",
+                version >> 16, (version >> 8) & 0xff, version & 0xff);
     }
-    printf("Input driver version is %d.%d.%d\n",
-            version >> 16, (version >> 8) & 0xff, version & 0xff);
 
-    ioctl(fd, EVIOCGID, id);
-    printf("Input device ID: bus 0x%x vendor 0x%x product 0x%x version 0x%x\n",
+    if( ioctl(fd, EVIOCGID, id) )
+    {
+        perror("can't retrieve vendor/product");
+        return false;
+    }
+
+    printf("Input device ID: bus 0x%x vendor 0x%x product 0x%x version 0x%x\n\n",
             id[ID_BUS], id[ID_VENDOR], id[ID_PRODUCT], id[ID_VERSION]);
 
     return (id[ID_VENDOR] == vendor) && (id[ID_PRODUCT] == product);
@@ -44,39 +50,27 @@ std::pair<bool, std::string> scan_devices( uint16_t vendor, uint16_t product )
 {
     printf("Scanning for compatible Vendor/Product:  0x%04X/0x%04X\n", vendor, product );
 
-    struct dirent **namelist;
-    int ndev = scandir(DEV_INPUT_EVENT, &namelist, is_event_device, alphasort);
-    if( ndev <= 0 ) {
-        return { false, "No devices in input directory" } ;
-    }
-
     printf("Available devices:\n");
 
-    std::string fname;
-    bool found = false;
-    for( int i = 0; i < ndev && !found; i++) {
+    std::string filename;
+    for( auto const& dir: std::filesystem::directory_iterator{DEV_INPUT_EVENT} ) {
         char name[256] = "???";
+        const std::string& fname = dir.path();
 
-        fname = std::string(DEV_INPUT_EVENT) +"/"+ std::string(namelist[i]->d_name);
         int fd = open(fname.c_str(), O_RDONLY);
-        if (fd >= 0) {
-            ioctl(fd, EVIOCGNAME(sizeof(name)), name);
-            if( does_device_match( fd, vendor, product )) {
-                printf("Device found: %s \n", fname.c_str() );
-                found = true;
-            }
-            close(fd);
-        }
+        if (fd < 0) continue;
+
+        int result = ioctl(fd, EVIOCGNAME(sizeof(name)), name);
+        if( result < 0 ) { close(fd); continue; }
         printf("%s:  %s\n", fname.c_str(), name);
-        free(namelist[i]);
+
+        if( !does_device_match( fd, vendor, product )) { close(fd); continue; }
+
+        printf("Device found: %s \n", fname.c_str() );
+        return {true, fname };
     }
 
-    if( !found ) {
-        sleep(5);
-        return { false, "No devices match configured vendor/product" } ;
-    }
-
-    return {true, fname};
+    return { false, "No devices match configured vendor/product" } ;
 }
 
 bool get_events(int fd, uint16_t type, uint16_t* code, uint16_t* value)

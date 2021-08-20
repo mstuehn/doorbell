@@ -87,11 +87,10 @@ int main( int argc, char* argv[] )
             bell.ring();
             } );
 
-            uint32_t vendor_number;
-            sscanf(root["input"]["vendor"].asString().c_str(), "%x", &vendor_number);
+            std::thread evdevpoll( [&bell, &mqtt, &base_topic, &root ](){
 
-            uint32_t product_number;
-            sscanf(root["input"]["product"].asString().c_str(), "%x", &product_number);
+            uint32_t vendor_number = std::stol(root["input"]["vendor"].asString(), nullptr, 0);
+            uint32_t product_number = std::stol(root["input"]["product"].asString(), nullptr, 0);
 
             std::string filename;
             do {
