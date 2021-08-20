@@ -87,7 +87,6 @@ int main( int argc, char* argv[] )
             bell.ring();
             } );
 
-    std::thread evdevpoll( [&bell, &mqtt, &base_topic, &root ](){
             uint32_t vendor_number;
             sscanf(root["input"]["vendor"].asString().c_str(), "%x", &vendor_number);
 
