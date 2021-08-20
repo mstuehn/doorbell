@@ -100,8 +100,10 @@ int main( int argc, char* argv[] )
                     break;
                 }
                 else {
-                    std::cerr << "Scanning devices not successfull: " << std::endl;
-                    std::cerr << result.second << std::endl;
+                    std::cout << "Scanning devices not successfull: " << std::endl;
+                    std::cout << ">>" << result.second << "<<" << std::endl;
+                    std::cout << "Rescan after 5 seconds" << std::endl;
+                    sleep(5);
                 }
             } while( true );
 
