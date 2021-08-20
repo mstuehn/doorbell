@@ -34,7 +34,7 @@ class DoorBell {
         std::string m_MixerDevice;
 
         std::thread m_PlayWorker;
-        sem_t m_EvenNotifier;
+        sem_t m_EventNotifier;
 
         std::atomic<bool> m_KeepRunning;
 };

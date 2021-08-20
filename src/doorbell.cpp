@@ -9,14 +9,14 @@
 
 bool DoorBell::ring()
 {
-    return sem_post( &m_EvenNotifier ) != -1;
+    return sem_post( &m_EventNotifier ) != -1;
 }
 
 DoorBell::DoorBell( Json::Value& config ) //: m_PlayWorker( &DoorBell::play_worker, this )
     : m_DataSize(256)
 {
     m_KeepRunning = true;
-    if( sem_init( &m_EvenNotifier, 0, 0 ) == -1 ) {
+    if( sem_init( &m_EventNotifier, 0, 0 ) == -1 ) {
         perror( "Not able to initialize semaphore" );
         exit(1);
     }
@@ -31,10 +31,10 @@ DoorBell::~DoorBell()
     m_KeepRunning = false;
 
     // Release play_worker
-    sem_post( &m_EvenNotifier );
+    sem_post( &m_EventNotifier );
     m_PlayWorker.join();
 
-    sem_destroy( &m_EvenNotifier );
+    sem_destroy( &m_EventNotifier );
     delete [] m_DataBuf;
 }
 
@@ -44,7 +44,7 @@ bool DoorBell::play_worker()
 
     while(m_KeepRunning)
     {
-        int result = sem_wait(&m_EvenNotifier);
+        int result = sem_wait(&m_EventNotifier);
         if( result != 0 || !m_KeepRunning ) return false;
 
         if( fd.open( m_FileToPlay ) != -1 )
@@ -61,7 +61,7 @@ bool DoorBell::play_worker()
             size_t n;
             while(m_KeepRunning)
             {
-                if( sem_trywait( &m_EvenNotifier ) == 0 ) fd.reset();
+                if( sem_trywait( &m_EventNotifier ) == 0 ) fd.reset();
 
                 int len = fd.read( m_DataBuf, m_DataSize );
 
