@@ -94,19 +94,27 @@ int main( int argc, char* argv[] )
             uint32_t product_number;
             sscanf(root["input"]["product"].asString().c_str(), "%x", &product_number);
 
-            char* filename;
+            std::string filename;
             do {
-                filename = scan_devices(vendor_number, product_number);
-            } while( filename == NULL );
+                auto result = scan_devices(vendor_number, product_number);
+                if( result.first ) {
+                    filename = result.second;
+                    break;
+                }
+                else {
+                    std::cerr << "Scanning devices not successfull: " << std::endl;
+                    std::cerr << result.second << std::endl;
+                }
+            } while( true );
 
             std::cout << "Opening " << filename << std::endl;
 
             int fd;
-            if( (fd = open(filename, O_RDONLY) ) < 0) {
+            if( (fd = open(filename.c_str(), O_RDONLY) ) < 0) {
                 perror("");
                 if (errno == EACCES && getuid() != 0) {
                     fprintf(stderr, "You do not have access to %s. Try "
-                            "running as root instead.\n", filename);
+                            "running as root instead.\n", filename.c_str());
                     }
                     return;
             }

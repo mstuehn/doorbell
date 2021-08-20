@@ -1,4 +1,3 @@
-#define _GNU_SOURCE /* for asprintf */
 
 #include "evdev.h"
 
@@ -10,6 +9,8 @@
 #include <dirent.h>
 #include <errno.h>
 #include <linux/input.h>
+
+#include <string>
 
 #define DEV_INPUT_EVENT "/dev/input"
 #define EVENT_DEV_NAME "event"
@@ -39,57 +40,51 @@ does_device_match( int fd, int vendor, int product )
     return (id[ID_VENDOR] == vendor) && (id[ID_PRODUCT] == product);
 }
 
-char*
-scan_devices( uint16_t vendor, uint16_t product )
+std::pair<bool, std::string> scan_devices( uint16_t vendor, uint16_t product )
 {
     printf("Scanning for compatible Vendor/Product:  0x%04X/0x%04X\n", vendor, product );
 
     struct dirent **namelist;
     int ndev = scandir(DEV_INPUT_EVENT, &namelist, is_event_device, alphasort);
     if( ndev <= 0 ) {
-        fprintf(stderr, "No devices found\n" );
-        return NULL;
+        return { false, "No devices in input directory" } ;
     }
 
     printf("Available devices:\n");
 
-    char fname[384];
+    std::string fname;
     bool found = false;
     for( int i = 0; i < ndev && !found; i++) {
         char name[256] = "???";
 
-        snprintf(fname, sizeof(fname), "%s/%s", DEV_INPUT_EVENT, namelist[i]->d_name);
-        int fd = open(fname, O_RDONLY);
+        fname = std::string(DEV_INPUT_EVENT) +"/"+ std::string(namelist[i]->d_name);
+        int fd = open(fname.c_str(), O_RDONLY);
         if (fd >= 0) {
             ioctl(fd, EVIOCGNAME(sizeof(name)), name);
             if( does_device_match( fd, vendor, product )) {
-                printf("Device found: %s \n", fname );
+                printf("Device found: %s \n", fname.c_str() );
                 found = true;
             }
             close(fd);
         }
-        printf("%s:  %s\n", fname, name);
+        printf("%s:  %s\n", fname.c_str(), name);
         free(namelist[i]);
     }
 
     if( !found ) {
-        printf("No devices found, wait 5s\n");
         sleep(5);
-        return NULL;
+        return { false, "No devices match configured vendor/product" } ;
     }
 
-    char *filename;
-    asprintf(&filename, "%s", fname );
-    return filename;
+    return {true, fname};
 }
 
-bool
-get_events(int fd, uint16_t type, uint16_t* code, uint16_t* value)
+bool get_events(int fd, uint16_t type, uint16_t* code, uint16_t* value)
 {
     struct input_event ev;
-    ssize_t size = read(fd, &ev, sizeof(struct input_event));
+    auto size = read(fd, &ev, sizeof(struct input_event));
 
-    if (size < sizeof(struct input_event)) {
+    if( size < (ssize_t)sizeof(struct input_event) ) {
         printf("expected %lu bytes, got %li\n", sizeof(struct input_event), size);
         perror("\nerror reading");
         return false;
