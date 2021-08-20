@@ -21,7 +21,7 @@ DBGFLAGS = -g3 -O0
 PRFFLAGS =
 CVRFLAGS =
 OPTFLAGS = -O3 -Wno-uninitialized
-WARNFLAGS = -Wall
+WARNFLAGS = -Wall -Wno-deprecated-volatile
 
 CFLAGS = $(WARNFLAGS) -std=gnu99
 CPPFLAGS = $(WARNFLAGS) -std=c++2a
