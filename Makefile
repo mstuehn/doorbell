@@ -24,7 +24,7 @@ OPTFLAGS = -O3 -Wno-uninitialized
 WARNFLAGS = -Wall
 
 CFLAGS = $(WARNFLAGS) -std=gnu99
-CPPFLAGS = $(WARNFLAGS) -std=c++17
+CPPFLAGS = $(WARNFLAGS) -std=c++2a
 
 LFLAGS =
 
