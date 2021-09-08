@@ -70,7 +70,7 @@ static void print_riff_header(riff_header_t *headp)
 }
 #endif
 
-WavFile::WavFile() : m_periode_size(1024), m_periode_count(4) {
+WavFile::WavFile() : m_periode_size(1024), m_periode_count(4), m_fd(-1) {
 }
 
 WavFile::~WavFile() {
