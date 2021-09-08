@@ -2,7 +2,8 @@
     "base_topic" : "myhouse/bell/otherbell",
     "input": {
         "vendor" : "0x1b4f",
-        "product" : "0x9206"
+        "product" : "0x9206",
+        "event" : 194
     },
     "mqtt-configuration": {
         "server": "mqtt",
