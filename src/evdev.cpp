@@ -122,6 +122,7 @@ void EvDevice::stop()
 {
     m_KeepRunning = false;
     m_Worker.join();
+    ::close( m_Fd );
 }
 
 EvDevice::~EvDevice()
