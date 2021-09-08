@@ -68,10 +68,9 @@ std::pair<bool, std::string> EvDevice::open()
         if( m_Fd < 0 ) continue;
 
         int result = ioctl( m_Fd, EVIOCGNAME(sizeof(name)), name );
-        if( result < 0 ) { close(m_Fd); continue; }
-        printf( "%s:  %s\n", fname.c_str(), name );
+        if( result < 0 ) { ::close(m_Fd); continue; }
 
-        if( !device_match()) { close(m_Fd); continue; }
+        if( !device_match()) { ::close(m_Fd); continue; }
 
         printf( "Device found: %s \n", fname.c_str() );
         return { true, "Device found: " + fname };
