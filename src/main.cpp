@@ -83,15 +83,14 @@ int main( int argc, char* argv[] )
     std::ifstream config( config_filename, std::ifstream::binary );
     bool parsingOk = parseFromStream( builder, config, &root, &errs );
 
-    if( !parsingOk )
-    {
+    if( !parsingOk ) {
         std::cerr << "Error during reading " << config_filename << " : " << errs << std::endl;
         exit( 2 );
     }
 
     const Json::Value input_cfg = get_config_node( root, "input" );
-    const Json::Value mqtt_cfg = get_config_node(root, "mqtt-configuration");
-    const Json::Value bell_cfg = get_config_node(root, "sound-configuration");
+    const Json::Value mqtt_cfg = get_config_node( root, "mqtt-configuration" );
+    const Json::Value bell_cfg = get_config_node( root, "sound-configuration" );
 
     auto base_topic = root.get("base_topic", "house/bell/generic").asString();
 
@@ -106,8 +105,8 @@ int main( int argc, char* argv[] )
             bell.ring();
             } );
 
-    const uint32_t vendor_number = std::stol(input_cfg.get( "vendor", "0x1b4f" ).asString(), nullptr, 0);
-    const uint32_t product_number = std::stol(input_cfg.get( "product", "0x9206" ).asString(), nullptr, 0);
+    const uint32_t vendor_number = std::stol( input_cfg.get( "vendor", "0x1b4f" ).asString(), nullptr, 0 );
+    const uint32_t product_number = std::stol( input_cfg.get( "product", "0x9206" ).asString(), nullptr, 0 );
     const uint16_t evdev_code = input_cfg.get( "event", KEY_F24 ).asUInt();
 
     EvDevice evdev( vendor_number, product_number );
@@ -122,7 +121,7 @@ int main( int argc, char* argv[] )
             Json::Value info;
             info["date"] = now();
             info["doorbell"] = true;
-            std::string msg = Json::writeString(wr, info);
+            std::string msg = Json::writeString( wr, info );
 
             mqtt.publish( pub_topic, msg.c_str(), msg.length(), 0 );
         });
