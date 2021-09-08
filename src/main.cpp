@@ -46,6 +46,18 @@ usage(void)
     exit(1);
 }
 
+const Json::Value get_config_node( Json::Value& root, std::string name ) {
+
+    const Json::Value result = root[name];
+
+    if( result.empty() ) {
+        std::cerr << "Error retrieving config value for " << name << std::endl;
+        exit(1);
+    }
+
+    return result;
+}
+
 int main( int argc, char* argv[] )
 {
     Json::Value root;
@@ -77,81 +89,47 @@ int main( int argc, char* argv[] )
         exit( 2 );
     }
 
-    MQTT mqtt( root["mqtt-configuration"] );
-    auto base_topic = root["base_topic"].asString();
+    const Json::Value input_cfg = get_config_node( root, "input" );
+    const Json::Value mqtt_cfg = get_config_node(root, "mqtt-configuration");
+    const Json::Value bell_cfg = get_config_node(root, "sound-configuration");
 
-    DoorBell bell( root["sound-configuration"] );
+    auto base_topic = root.get("base_topic", "house/bell/generic").asString();
 
-    mqtt.add_callback( base_topic+"/cmd/ring", [&bell](uint8_t*msg, size_t len){
+    const std::string sub_topic = base_topic + "/cmd/ring";
+    const std::string pub_topic = base_topic + "/rang";
+
+    DoorBell bell( bell_cfg );
+
+    MQTT mqtt( mqtt_cfg );
+    mqtt.add_callback( sub_topic, [&bell](uint8_t*msg, size_t len){
             printf("Ring due to mqtt-message\n");
             bell.ring();
             } );
 
-    std::thread evdevpoll( [&bell, &mqtt, &base_topic, &root ](){
+    const uint32_t vendor_number = std::stol(input_cfg.get( "vendor", "0x1b4f" ).asString(), nullptr, 0);
+    const uint32_t product_number = std::stol(input_cfg.get( "product", "0x9206" ).asString(), nullptr, 0);
+    const uint16_t evdev_code = input_cfg.get( "event", KEY_F24 ).asUInt();
 
-        uint32_t vendor_number = std::stol(root["input"]["vendor"].asString(), nullptr, 0);
-        uint32_t product_number = std::stol(root["input"]["product"].asString(), nullptr, 0);
+    EvDevice evdev( vendor_number, product_number );
+    evdev.add_callback( evdev_code, [&bell, &mqtt, pub_topic](uint16_t code){
 
-        std::string filename;
-        do {
-            auto result = scan_devices(vendor_number, product_number);
-            if( result.first ) {
-                filename = result.second;
-                break;
-            }
-            else {
-                std::cout << "Scanning devices not successfull: " << std::endl;
-                std::cout << ">>" << result.second << "<<" << std::endl;
-                std::cout << "Rescan after 5 seconds" << std::endl;
-                sleep(5);
-            }
-        } while( true );
+            // only rising edge
+            if( code == 0 ) return;
 
-        std::cout << "Opening " << filename << std::endl;
+            bell.ring();
 
-        int fd;
-        if( (fd = open(filename.c_str(), O_RDONLY) ) < 0) {
-            perror("");
-            if (errno == EACCES && getuid() != 0) {
-                fprintf(stderr, "You do not have access to %s. Try "
-                        "running as root instead.\n", filename.c_str());
-                }
-                return;
-        }
+            Json::StreamWriterBuilder wr;
+            Json::Value info;
+            info["date"] = now();
+            info["doorbell"] = true;
+            std::string msg = Json::writeString(wr, info);
 
-        while( 1 ) {
-            uint16_t code, value;
-            if( get_events( fd, EV_KEY, &code, &value ) && value == 1 )
-            {
-                switch( code ) {
-                    case KEY_F24:
-                    {
-                        bell.ring();
-                        Json::StreamWriterBuilder wr;
-                        Json::Value info;
-                        info["date"] = now();
-                        info["doorbell"] = true;
-                        std::string msg = Json::writeString(wr, info);
-                        mqtt.publish(base_topic+"/ringed", msg.c_str(), msg.length(), 0 );
-                    } break;
-
-                    case KEY_F23:
-                    {
-                        using std::chrono::system_clock;
-                        std::time_t now = system_clock::to_time_t( system_clock::now() );
-                        struct std::tm *pnow = std::localtime(&now);
-                        std::cout << std::put_time( pnow, "[%F %T] " ) << "Lifesign" << std::endl;
-                    }break;
-
-                }
-            }
-        }
-    });
+            mqtt.publish( pub_topic, msg.c_str(), msg.length(), 0 );
+        });
 
     while(1) mqtt.loop();
 
-    printf("Exit program\n");
+    std::cout << "Exit program" << std::endl;
 
-    evdevpoll.join();
     return 0;
 }
