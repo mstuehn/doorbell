@@ -9,6 +9,7 @@
 
 const std::string EvDevice::DEV_INPUT_EVENT = { "/dev/input" };
 
+/*
 static void print_driver_version( int fd )
 {
     int version;
@@ -19,7 +20,7 @@ static void print_driver_version( int fd )
                 version >> 16, (version >> 8) & 0xff, version & 0xff);
     }
 
-}
+}*/
 
 void EvDevice::add_callback( uint16_t code, std::function<void(uint16_t)> cb )
 {
