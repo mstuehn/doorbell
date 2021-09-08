@@ -44,7 +44,7 @@ std::pair<bool, std::pair<uint16_t, uint16_t>> EvDevice::get_events(uint16_t typ
 
     if( size < (ssize_t)sizeof(struct input_event) ) {
         printf("expected %lu bytes, got %li\n", sizeof(struct input_event), size);
-        perror("\nerror reading");
+        perror("error reading");
         return { false, {0,0}};
     }
 
