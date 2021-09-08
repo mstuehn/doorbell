@@ -2,6 +2,7 @@
 #include "mqtt.h"
 #include <iostream>
 #include <chrono>
+#include <ostream>
 #include <thread>
 
 #include <unistd.h>
@@ -38,7 +39,7 @@ void MQTT::mqtt_msg_cb( struct mosquitto* mqtt, void* mqtt_new_data, const struc
 }
 
 
-MQTT::MQTT(Json::Value config)
+MQTT::MQTT( const Json::Value config )
 {
     if( s_RefCnt + 1 == 1 ){
         s_RefCnt++;
@@ -46,12 +47,16 @@ MQTT::MQTT(Json::Value config)
     }
 
     m_Mosq = mosquitto_new( nullptr, true, this );
+    if( m_Mosq == nullptr ) {
+        std::cerr << "Could not build mosquitto struct, exiting" << std::endl;
+        exit(3);
+    }
 
-    auto host = config["server"].asString();
-    auto port = config["port"].asInt();
-    auto keepalive = config["keepalive"].asInt();
-    if( mosquitto_connect( m_Mosq, host.c_str(), port, keepalive ) < 0 )
-    {
+    auto host = config.get("server", "mqtt").asString();
+    auto port = config.get("port", 1883).asInt();
+    auto keepalive = config.get("keepalive", 60).asInt();
+
+    if( mosquitto_connect( m_Mosq, host.c_str(), port, keepalive ) < 0 ) {
         std::cerr << "failed to connect to mqtt" << std::endl;
     }
 

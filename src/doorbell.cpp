@@ -21,8 +21,8 @@ DoorBell::DoorBell( Json::Value& config ) //: m_PlayWorker( &DoorBell::play_work
         exit(1);
     }
     m_PlayWorker = std::thread( &DoorBell::play_worker, this );
-    m_FileToPlay = config["file_to_play"].asString();
-    m_SoundDevice = config["device"].asString();
+    m_FileToPlay = config.get("file_to_play", "data/DoorBell.wav").asString();
+    m_SoundDevice = config.get("device", "/dev/dsp").asString();
     m_DataBuf = new uint8_t[m_DataSize];
 }
 
