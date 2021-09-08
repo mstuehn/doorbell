@@ -19,7 +19,7 @@ class DoorBell {
     public:
         bool ring();
 
-        DoorBell( Json::Value& config );
+        DoorBell( const Json::Value& config );
         virtual ~DoorBell();
 
     private:

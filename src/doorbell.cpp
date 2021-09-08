@@ -12,7 +12,7 @@ bool DoorBell::ring()
     return sem_post( &m_EventNotifier ) != -1;
 }
 
-DoorBell::DoorBell( Json::Value& config ) //: m_PlayWorker( &DoorBell::play_worker, this )
+DoorBell::DoorBell( const Json::Value& config ) //: m_PlayWorker( &DoorBell::play_worker, this )
     : m_DataSize(256)
 {
     m_KeepRunning = true;
