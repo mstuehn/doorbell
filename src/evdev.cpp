@@ -106,6 +106,7 @@ EvDevice::EvDevice( uint16_t vendor, uint16_t product ) :
             const auto now = std::chrono::steady_clock::now();
             if( now - m_Last > m_Throttle )
             {
+                m_Last = now;
                 if( result.first )
                 {
                     std::lock_guard<std::mutex> lockGuard(m_Mtx);
@@ -116,7 +117,6 @@ EvDevice::EvDevice( uint16_t vendor, uint16_t product ) :
                     }
                 }
             }
-            m_Last = now;
         }
         std::cout << "Exit monitor thread" << std::endl;
     })
