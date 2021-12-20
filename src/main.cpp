@@ -110,6 +110,7 @@ int main( int argc, char* argv[] )
     const uint16_t evdev_code = input_cfg.get( "event", KEY_F24 ).asUInt();
 
     EvDevice evdev( vendor_number, product_number );
+    evdev.add_throttle(0.5);
     evdev.add_callback( evdev_code, [&bell, &mqtt, pub_topic](uint16_t code){
 
             // only rising edge
