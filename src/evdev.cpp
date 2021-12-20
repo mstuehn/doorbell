@@ -3,6 +3,7 @@
 #include <linux/input.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <chrono>
 
 #include <iostream>
 
@@ -80,7 +81,6 @@ std::pair<bool, std::string> EvDevice::open()
     return { false, "No devices match configured vendor/product" } ;
 }
 
-
 EvDevice::EvDevice( uint16_t vendor, uint16_t product ) :
     m_Vendor( vendor ), m_Product( product ), m_KeepRunning( true ),
     m_Worker( [this](){
@@ -103,20 +103,30 @@ EvDevice::EvDevice( uint16_t vendor, uint16_t product ) :
             const uint16_t code = result.second.first;
             const uint16_t value = result.second.second;
 
-            if( result.first )
+            const auto now = std::chrono::steady_clock::now();
+            if( now - m_Last > m_Throttle )
             {
-                std::lock_guard<std::mutex> lockGuard(m_Mtx);
-                if( !m_Callbacks.count(code) && m_Callbacks[code].empty() ) continue;
+                if( result.first )
+                {
+                    std::lock_guard<std::mutex> lockGuard(m_Mtx);
+                    if( !m_Callbacks.count(code) && m_Callbacks[code].empty() ) continue;
 
-                for( auto& callback : m_Callbacks[code] ) {
-                    callback( value );
+                    for( auto& callback : m_Callbacks[code] ) {
+                        callback( value );
+                    }
                 }
             }
+            m_Last = now;
         }
         std::cout << "Exit monitor thread" << std::endl;
     })
 {
 
+}
+
+void EvDevice::add_throttle( float seconds )
+{
+    m_Throttle = std::chrono::duration<float>(seconds);
 }
 
 void EvDevice::stop()

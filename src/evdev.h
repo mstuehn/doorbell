@@ -9,6 +9,7 @@
 #include <functional>
 #include <filesystem>
 #include <thread>
+#include <chrono>
 
 class EvDevice {
     public:
@@ -18,6 +19,7 @@ class EvDevice {
         void add_callback( uint16_t, std::function<void(uint16_t)>);
 
         void stop();
+        void add_throttle( float seconds );
 
     private:
         // member functions
@@ -31,6 +33,8 @@ class EvDevice {
         const uint16_t m_Vendor;
         const uint16_t m_Product;
         int32_t m_Fd;
+        std::chrono::duration<float, std::milli> m_Throttle;
+        std::chrono::time_point<std::chrono::steady_clock> m_Last;
 
         bool m_KeepRunning;
 
