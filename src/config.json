@@ -14,5 +14,6 @@
     "sound-configuration": {
         "device": "/dev/dsp",
         "file_to_play" : "data/DoorBell.wav"
-    }
+    },
+    "throttle" : 1.5
 }
