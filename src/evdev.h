@@ -16,25 +16,22 @@ class EvDevice {
         EvDevice( uint16_t, uint16_t );
         virtual ~EvDevice();
 
-        void add_callback( uint16_t, std::function<void(uint16_t)>);
+        void add_callback( uint16_t, std::function<void(uint16_t,timeval)>);
 
         void stop();
-        void add_throttle( float seconds );
 
     private:
         // member functions
         std::pair<bool, std::string> open();
         bool device_match();
 
-        std::pair<bool, std::pair<uint16_t, uint16_t>> get_events(uint16_t type);
+        std::pair<bool, std::tuple<uint16_t, uint16_t, timeval>> get_events(uint16_t type);
         void worker_thread(void);
 
         // members
         const uint16_t m_Vendor;
         const uint16_t m_Product;
         int32_t m_Fd;
-        std::chrono::duration<float, std::milli> m_Throttle;
-        std::chrono::time_point<std::chrono::steady_clock> m_Last;
 
         bool m_KeepRunning;
 
@@ -42,7 +39,7 @@ class EvDevice {
 
 
         std::mutex m_Mtx;
-        std::map<int, std::list<std::function<void(uint16_t value)>>> m_Callbacks;
+        std::map<int, std::list<std::function<void(uint16_t value, timeval when)>>> m_Callbacks;
 
         static const std::string DEV_INPUT_EVENT;
 

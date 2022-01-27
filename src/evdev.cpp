@@ -22,7 +22,7 @@ static void print_driver_version( int fd )
 
 }*/
 
-void EvDevice::add_callback( uint16_t code, std::function<void(uint16_t)> cb )
+void EvDevice::add_callback( uint16_t code, std::function<void(uint16_t, timeval)> cb )
 {
     std::lock_guard<std::mutex> lockGuard(m_Mtx);
     m_Callbacks[code].push_back( cb );
@@ -38,7 +38,7 @@ bool EvDevice::device_match(){
     return (id[ID_VENDOR] == m_Vendor ) && (id[ID_PRODUCT] == m_Product );
 }
 
-std::pair<bool, std::pair<uint16_t, uint16_t>> EvDevice::get_events(uint16_t type)
+std::pair<bool, std::tuple<uint16_t, uint16_t, timeval>> EvDevice::get_events(uint16_t type)
 {
     struct input_event ev;
     auto size = ::read( m_Fd, &ev, sizeof(struct input_event) );
@@ -46,12 +46,12 @@ std::pair<bool, std::pair<uint16_t, uint16_t>> EvDevice::get_events(uint16_t typ
     if( size < (ssize_t)sizeof(struct input_event) ) {
         printf("expected %lu bytes, got %li\n", sizeof(struct input_event), size);
         perror("error reading");
-        return { false, {0,0}};
+        return { false, {0,0, {0, 0}}};
     }
 
-    if( type != ev.type ) return { false, {0,0}};
+    if( type != ev.type ) return { false, {0,0, {0, 0}}};
 
-    return { true, {ev.code, ev.value }};
+    return { true, {ev.code, ev.value, ev.time}};
 }
 
 
@@ -99,8 +99,9 @@ EvDevice::EvDevice( uint16_t vendor, uint16_t product ) :
 
         while( m_KeepRunning ) {
             auto result = get_events( EV_KEY );
-            const uint16_t code = result.second.first;
-            const uint16_t value = result.second.second;
+            const uint16_t code = std::get<0>(result.second);
+            const uint16_t value = std::get<1>(result.second);
+            const timeval when = std::get<2>(result.second);
 
             if( result.first )
             {
@@ -108,7 +109,7 @@ EvDevice::EvDevice( uint16_t vendor, uint16_t product ) :
                 if( !m_Callbacks.count(code) && m_Callbacks[code].empty() ) continue;
 
                 for( auto& callback : m_Callbacks[code] ) {
-                    callback( value );
+                    callback( value, when );
                 }
             }
         }
@@ -116,11 +117,6 @@ EvDevice::EvDevice( uint16_t vendor, uint16_t product ) :
     })
 {
 
-}
-
-void EvDevice::add_throttle( float seconds )
-{
-    m_Throttle = std::chrono::duration<float>(seconds);
 }
 
 void EvDevice::stop()
