@@ -8,11 +8,12 @@
 
 name="doorbell"
 rcvar="doorbell_enable"
-#bell_user="bell"
+
 bell_command="%%PREFIX%%/bin/doorbell"
 pidfile="/var/run/${name}.pid"
+bell_output="/var/log/${name}.log"
 command="/usr/sbin/daemon"
-command_args="-P ${pidfile} -r -f ${bell_command}"
+command_args="-P ${pidfile} -r -f ${bell_command} -o ${bell_output}"
 
 load_rc_config $name
 : ${doorbell_enable:=no}
