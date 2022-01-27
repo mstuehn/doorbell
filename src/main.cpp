@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
 #include <fcntl.h>
 #include <inttypes.h>
@@ -113,10 +114,22 @@ int main( int argc, char* argv[] )
 
     EvDevice evdev( vendor_number, product_number );
     evdev.add_throttle(throttle);
-    evdev.add_callback( evdev_code, [&bell, &mqtt, pub_topic](uint16_t code){
+    evdev.add_callback( evdev_code, [&bell, &mqtt, pub_topic, throttle](uint16_t code){
+            static auto last = std::chrono::steady_clock::now();
+            const auto debounce = std::chrono::duration<float>(throttle);
 
             // only rising edge
             if( code == 0 ) return;
+
+            const auto chrono_now = std::chrono::steady_clock::now();
+            auto last_cache = last;
+            last = chrono_now;
+
+            if( chrono_now - last_cache < debounce ) {
+                std::cout << "Debounced" << (chrono_now - last_cache).count()
+                          << "ms < " << debounce.count() << "ms" << std::endl;
+                return;
+            }
 
             bell.ring();
 

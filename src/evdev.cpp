@@ -3,7 +3,6 @@
 #include <linux/input.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <chrono>
 
 #include <iostream>
 
@@ -103,21 +102,13 @@ EvDevice::EvDevice( uint16_t vendor, uint16_t product ) :
             const uint16_t code = result.second.first;
             const uint16_t value = result.second.second;
 
-            const auto now = std::chrono::steady_clock::now();
             if( result.first )
             {
-                if( now - m_Last > m_Throttle )
-                {
-                    m_Last = now;
+                std::lock_guard<std::mutex> lockGuard(m_Mtx);
+                if( !m_Callbacks.count(code) && m_Callbacks[code].empty() ) continue;
 
-                    std::lock_guard<std::mutex> lockGuard(m_Mtx);
-                    if( !m_Callbacks.count(code) && m_Callbacks[code].empty() ) continue;
-
-                    for( auto& callback : m_Callbacks[code] ) {
-                        callback( value );
-                    }
-                } else {
-                    std::cout << "Ignored event, too high frequency " << (now - m_Last).count() << "ms" << std::endl;
+                for( auto& callback : m_Callbacks[code] ) {
+                    callback( value );
                 }
             }
         }
