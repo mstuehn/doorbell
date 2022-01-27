@@ -1,3 +1,4 @@
+#include <sys/select.h>
 #include <unistd.h>
 #include <signal.h>
 #include <iostream>
@@ -59,6 +60,15 @@ const Json::Value get_config_node( Json::Value& root, std::string name ) {
     return result;
 }
 
+timeval to_timeval( float seconds )
+{
+    timeval t;
+    t.tv_sec = (int)seconds;
+    t.tv_usec = (seconds - t.tv_sec) * 1000000;
+
+    return t;
+}
+
 int main( int argc, char* argv[] )
 {
     Json::Value root;
@@ -94,8 +104,7 @@ int main( int argc, char* argv[] )
     const Json::Value bell_cfg = get_config_node( root, "sound-configuration" );
 
     auto base_topic = root.get("base_topic", "house/bell/generic").asString();
-    float throttle = root.get("throttle", 1.0 ).asFloat();
-    std::cout << "Throttling by " << throttle << "seconds";
+    timeval throttle = to_timeval( root.get("throttle", 1.0 ).asFloat() );
 
     const std::string sub_topic = base_topic + "/cmd/ring";
     const std::string pub_topic = base_topic + "/rang";
@@ -113,23 +122,17 @@ int main( int argc, char* argv[] )
     const uint16_t evdev_code = input_cfg.get( "event", KEY_F24 ).asUInt();
 
     EvDevice evdev( vendor_number, product_number );
-    evdev.add_throttle(throttle);
-    evdev.add_callback( evdev_code, [&bell, &mqtt, pub_topic, throttle](uint16_t code){
-            static auto last = std::chrono::steady_clock::now();
-            const auto debounce = std::chrono::duration<float>(throttle);
+    evdev.add_callback( evdev_code, [&bell, &mqtt, pub_topic, throttle](uint16_t code, timeval when){
+            static timeval last = {0, 0};
 
             // only rising edge
             if( code == 0 ) return;
 
-            const auto chrono_now = std::chrono::steady_clock::now();
-            auto last_cache = last;
-            last = chrono_now;
+            timeval cmpare;
+            timeradd( &last, &throttle, &cmpare );
 
-            if( chrono_now - last_cache < debounce ) {
-                std::cout << "Debounced" << (chrono_now - last_cache).count()
-                          << "ms < " << debounce.count() << "ms" << std::endl;
-                return;
-            }
+            last = when;
+            if( !timercmp( &cmpare, &when, < ) ) return;
 
             bell.ring();
 
