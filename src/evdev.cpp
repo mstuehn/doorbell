@@ -104,20 +104,21 @@ EvDevice::EvDevice( uint16_t vendor, uint16_t product ) :
             const uint16_t value = result.second.second;
 
             const auto now = std::chrono::steady_clock::now();
-            if( now - m_Last > m_Throttle )
+            if( result.first )
             {
-                m_Last = now;
-                if( result.first )
+                if( now - m_Last > m_Throttle )
                 {
+                    m_Last = now;
+
                     std::lock_guard<std::mutex> lockGuard(m_Mtx);
                     if( !m_Callbacks.count(code) && m_Callbacks[code].empty() ) continue;
 
                     for( auto& callback : m_Callbacks[code] ) {
                         callback( value );
                     }
+                } else {
+                    std::cout << "Ignored event, too high frequency " << (now - m_Last).count() << "ms" << std::endl;
                 }
-            } else {
-                std::cout << "Ignored event, too high frequency " << (now - m_Last).count() << "ms" << std::endl;
             }
         }
         std::cout << "Exit monitor thread" << std::endl;
