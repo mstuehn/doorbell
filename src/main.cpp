@@ -93,6 +93,8 @@ int main( int argc, char* argv[] )
     const Json::Value bell_cfg = get_config_node( root, "sound-configuration" );
 
     auto base_topic = root.get("base_topic", "house/bell/generic").asString();
+    float throttle = root.get("throttle", 1.0 ).asFloat();
+    std::cout << "Throttling by " << throttle << "seconds";
 
     const std::string sub_topic = base_topic + "/cmd/ring";
     const std::string pub_topic = base_topic + "/rang";
@@ -110,7 +112,7 @@ int main( int argc, char* argv[] )
     const uint16_t evdev_code = input_cfg.get( "event", KEY_F24 ).asUInt();
 
     EvDevice evdev( vendor_number, product_number );
-    evdev.add_throttle(0.5);
+    evdev.add_throttle(throttle);
     evdev.add_callback( evdev_code, [&bell, &mqtt, pub_topic](uint16_t code){
 
             // only rising edge
