@@ -116,6 +116,8 @@ EvDevice::EvDevice( uint16_t vendor, uint16_t product ) :
                         callback( value );
                     }
                 }
+            } else {
+                std::cout << "Ignored event, too high frequency " << (now - m_Last).count() << "ms" << std::endl;
             }
         }
         std::cout << "Exit monitor thread" << std::endl;
