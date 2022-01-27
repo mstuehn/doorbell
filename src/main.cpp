@@ -132,8 +132,8 @@ int main( int argc, char* argv[] )
             timeval cmpare;
             timeradd( &last, &throttle, &cmpare );
 
-            last = when;
             if( !timercmp( &cmpare, &when, < ) ) return;
+            last = when;
 
             bell.ring();
 
